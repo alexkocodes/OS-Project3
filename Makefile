@@ -1,21 +1,18 @@
-OBJS 	= reader.o writer.o
+OBJS 	= reader writer
 SOURCE	= reader.c writer.c
-OUT  	= reader writer
 CC	= gcc
 FLAGS   = -g -c -pedantic -ansi  -Wall -std=c99
 LIBS = -lm
 # -g option enables debugging mode 
 # -c flag generates object code for separate files
 
-$(OUT): $(OBJS)
-	$(CC) -g $(OBJS) -o $@ $(LIBS)
-
+all: reader writer
 # create/compile the individual files >>separately<< 
-reader.o: reader.c
-	$(CC) $(FLAGS) reader.c $(LIBS)
-
-writer.o: writer.c
-	$(CC) $(FLAGS) writer.c $(LIBS)
+reader: reader.c
+	gcc -o reader reader.c
+	
+writer: writer.c
+	gcc -o writer writer.c
 
 # clean house
 clean:

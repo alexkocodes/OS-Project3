@@ -1,0 +1,7 @@
+{
+    "files.associations": {
+        "stdbool.h": "c",
+        "wait.h": "c",
+        "select.h": "c"
+    }
+}
