@@ -3,6 +3,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <math.h>
+#include "Hashmap.h"
 
 // ------------------ Global Variables ------------------
 // Default values initialized for 50 entries
@@ -11,22 +12,6 @@ int NUM_BUCKETS = 25;
 int BUCKET_SIZE = 5;
 int H0_CONST = 25;
 int H1_CONST = 50;
-
-// Global variables for student records
-#define ID_LENGTH 9
-#define LAST_NAME_LENGTH 21
-#define FIRST_NAME_LENGTH 21
-#define NUM_COURSES 8
-
-// Struct to hold information about a voter to be used as value in hash table
-typedef struct {
-    char studentID[ID_LENGTH];
-    char lastName[LAST_NAME_LENGTH];
-    char firstName[FIRST_NAME_LENGTH];
-    float grades[NUM_COURSES];
-    float GPA;
-    // int isBeingModified;
-} studentRecord;
 
 // Function to encode a string (in our case, the student ID)
 // into a long integer (for the hash table containing student records)
@@ -46,14 +31,6 @@ long encodeString(char* str) {
 // ------------------ Global Variables ------------------
 
 // ------------------ Linked List Functions ------------------
-// Struct to hold information about a node in a linked list
-// Key: int (PIN) for hash table
-// Value: Voter informaton
-typedef struct node {
-  char key[ID_LENGTH];
-  studentRecord value;
-  struct node *next;
-} node;
 
 // Function to initialize a new linked list
 node *init_linked_list() {
@@ -149,12 +126,6 @@ void print_linked_list(node *head) {
 // ------------------ Linked List Functions ------------------
 
 // ------------------ Hash Table Functions ------------------
-// Struct to hold information about a hash table
-typedef struct hash_table {
-  int size;
-  int cutoff;
-  node **table;
-} hash_table;
 
 // Function to initialize a new hash table
 hash_table *init_hash_table() {
