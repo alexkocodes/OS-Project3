@@ -1,26 +1,34 @@
-OBJS 	= reader writer coordinator
-SOURCE	= reader.c writer.c coordinator.c
-CC	= gcc
-FLAGS   = -g -c -pedantic -ansi  -Wall -std=c99
-LIBS = -lm
-# -g option enables debugging mode 
-# -c flag generates object code for separate files
+CC = gcc
+CFLAGS = -Wall -g
 
+# list of source files
+SRCS = reader.c writer.c coordinator.c Hashmap.c
+
+# list of object files
+OBJS = $(SRCS:.c=.o)
+
+# dependencies
+DEPS = Hashmap.h
+
+# default target
 all: reader writer coordinator
-# create/compile the individual files >>separately<< 
-reader: reader.c
-	gcc -o reader reader.c
-	
-writer: writer.c
-	gcc -o writer writer.c
 
-writer: coordinator.c
-	gcc -o coordinator coordinator.c
+# compile the reader program
+reader: reader.o Hashmap.o
+	$(CC) $(CFLAGS) -o $@ $^
 
-# clean house
+# compile the writer program
+writer: writer.o Hashmap.o
+	$(CC) $(CFLAGS) -o $@ $^
+
+# compile the coordinator program
+coordinator: coordinator.o Hashmap.o
+	$(CC) $(CFLAGS) -o $@ $^
+
+# compile the Hashmap module
+Hashmap.o: Hashmap.c Hashmap.h
+	$(CC) $(CFLAGS) -c $<
+
+# clean up object files and executables
 clean:
-	rm -f $(OBJS) $(OUT)
-
-# do a bit of accounting
-count:
-	wc $(SOURCE) $(HEADER)
+	rm -f $(OBJS) reader writer coordinator
