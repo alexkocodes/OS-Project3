@@ -89,7 +89,7 @@ int main(int argc, char *argv[])
     }
 
     // Attach shared memory segment
-    if ((h_table = shmat(shmid, NULL, 0)) == (void *)-1)
+    if ((h_table = shmat(shmid, NULL, 0)) == (hash_table *)-1)
     {
         perror("Failed to attach shared memory");
         exit(EXIT_FAILURE);
