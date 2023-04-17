@@ -75,9 +75,10 @@ int main(int argc, char *argv[])
     // cast shimid to int
     int shmid = atoi(shmid_input);
     key_t key;
+    char *data;
 
     // The segment with key 9999 that was created by the writer process
-    key = 9999;
+    key = 100;
 
     // Locate the shared memory segment
     shmid = shmget(key, SHM_SIZE, 0666);
@@ -89,28 +90,16 @@ int main(int argc, char *argv[])
     }
 
     // Attach shared memory segment
-    if ((h_table = shmat(shmid, NULL, 0)) == (hash_table *)-1)
+    if ((data = shmat(shmid, NULL, 0)) == (char *)-1)
     {
         perror("Failed to attach shared memory");
         exit(EXIT_FAILURE);
     }
 
-    // // Search for a student
-    // studentRecord *sr = search(h_table, "0#01a7c3");
-    // if (sr != NULL)
-    // {
-    //     printf("Found student: %s, %s\n", sr->lastName, sr->firstName);
-    // }
-    // else
-    // {
-    //     printf("Student not found!\n");
-    // }
-
-    print_hash_table(h_table);
-
     printf("reader running...\n");
     while (1)
     {
+        printf("Data is: %s", data);
         // take user input and if the user types exit, then we break the while loop
         char input[100];
         printf("Enter a command: ");
@@ -121,9 +110,9 @@ int main(int argc, char *argv[])
         }
     };
     // Detach from the shared memory segment
-    if (shmdt(h_table) == -1)
+    if (shmdt(data) == -1)
     {
-        printf("detaching from shared memory segment failed");
+        printf("detaching from shared memory segment failed\n");
         perror("shmdt");
         exit(1);
     }
@@ -131,5 +120,7 @@ int main(int argc, char *argv[])
     {
         printf("detaching from shared memory segment successful\n");
     }
+    // destroy the shared memory
+    shmctl(shmid, IPC_RMID, NULL);
     exit(0);
 }

@@ -44,6 +44,7 @@ int main(int argc, char *argv[])
     h_table = init_hash_table();
     signal(SIGINT, cleanup_handler); // register the cleanup handler
 
+    char *data;
     // Insert some sample entries
     studentRecord sr1 = {"00000001", "Smith", "John", {4.0, 3.5, 3.0, 0.0, 0.0, 0.0, 0.0, 0.0}, 3.50};
     studentRecord sr2 = {"a1c00002", "Johnson", "Mary", {3.5, 3.5, 3.0, 3.0, 0.0, 0.0, 0.0, 0.0}, 3.25};
@@ -51,15 +52,16 @@ int main(int argc, char *argv[])
     studentRecord sr4 = {"00000004", "Lee", "Jae", {2.0, 1.5, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0}, 1.25};
 
     // coordinator creates shared memory segment to store the hashmap
-    key_t key = 9999;
-    int shmid = shmid = shmget(key, SHM_SIZE, 0666 | IPC_CREAT);
+    key_t key = 100;
+    int shmid = shmget(key, SHM_SIZE, 0666 | IPC_CREAT);
     if (shmid == -1)
     {
         perror("Failed to create shared memory segment");
         exit(1);
     }
     // Attach shared memory segment
-    if ((h_table = shmat(shmid, NULL, 0)) == (hash_table *)-1)
+    data = shmat(shmid, NULL, 0);
+    if (data == (char *)(-1))
     {
         perror("Failed to attach shared memory");
         exit(EXIT_FAILURE);
@@ -70,8 +72,10 @@ int main(int argc, char *argv[])
     // insert(h_table, sr2);
     // insert(h_table, sr3);
     // insert(h_table, sr4);
+    printf("Write Data : ");
+    gets(data); // get input from user
 
-    print_hash_table(h_table);
+    printf("Data written in memory: %s\n", data);
     printf("coordinator running...\n");
     while (1)
     {
@@ -85,9 +89,9 @@ int main(int argc, char *argv[])
         }
     };
     // Detach from the shared memory segment
-    if (shmdt(h_table) == -1)
+    if (shmdt(data) == -1)
     {
-        printf("detaching from shared memory segment failed");
+        printf("detaching from shared memory segment failed\n");
         perror("shmdt");
         exit(1);
     }
@@ -95,5 +99,7 @@ int main(int argc, char *argv[])
     {
         printf("detaching from shared memory segment successful\n");
     }
+    // destroy the shared memory
+    shmctl(shmid, IPC_RMID, NULL);
     exit(0);
 }
