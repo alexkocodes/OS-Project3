@@ -303,7 +303,7 @@ void print_hash_table(hash_table *ht)
   int i;
   if (ht->size == 0)
   {
-    printf("Hash table is empty");
+    printf("Hash table is empty\n");
     return;
   }
   for (i = 0; i < ht->size; i++)

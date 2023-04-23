@@ -20,12 +20,12 @@
 #define SHM_SIZE 1024
 
 // create a hashmap
-hash_table *h_table;
+studentRecord *shared_array = NULL;
 void cleanup_handler(int sig)
 {
 
     // Detach from the shared memory segment
-    if (shmdt(h_table) == -1)
+    if (shmdt(shared_array) == -1)
     {
         printf("detaching from shared memory segment failed");
         perror("shmdt");
@@ -40,7 +40,6 @@ void cleanup_handler(int sig)
 
 int main(int argc, char *argv[])
 {
-    h_table = init_hash_table();
     signal(SIGINT, cleanup_handler); // register the cleanup handler
 
     char *filename;
@@ -77,7 +76,7 @@ int main(int argc, char *argv[])
     key_t key;
 
     // The segment with key 9999 that was created by the writer process
-    key = 9999;
+    key = 100;
 
     // Locate the shared memory segment
     shmid = shmget(key, SHM_SIZE, 0666);
@@ -89,28 +88,19 @@ int main(int argc, char *argv[])
     }
 
     // Attach shared memory segment
-    if ((h_table = shmat(shmid, NULL, 0)) == (hash_table *)-1)
+    if ((shared_array = shmat(shmid, NULL, 0)) == (void *)-1)
     {
         perror("Failed to attach shared memory");
         exit(EXIT_FAILURE);
     }
 
-    // // Search for a student
-    // studentRecord *sr = search(h_table, "0#01a7c3");
-    // if (sr != NULL)
-    // {
-    //     printf("Found student: %s, %s\n", sr->lastName, sr->firstName);
-    // }
-    // else
-    // {
-    //     printf("Student not found!\n");
-    // }
-
-    print_hash_table(h_table);
+    // read from the shared array
+    printf("%s %s %s\n", shared_array[0].studentID, shared_array[0].firstName, shared_array[0].lastName);
 
     printf("reader running...\n");
     while (1)
     {
+
         // take user input and if the user types exit, then we break the while loop
         char input[100];
         printf("Enter a command: ");
@@ -121,9 +111,9 @@ int main(int argc, char *argv[])
         }
     };
     // Detach from the shared memory segment
-    if (shmdt(h_table) == -1)
+    if (shmdt(shared_array) == -1)
     {
-        printf("detaching from shared memory segment failed");
+        printf("detaching from shared memory segment failed\n");
         perror("shmdt");
         exit(1);
     }
@@ -131,5 +121,7 @@ int main(int argc, char *argv[])
     {
         printf("detaching from shared memory segment successful\n");
     }
+    // destroy the shared memory
+    shmctl(shmid, IPC_RMID, NULL);
     exit(0);
 }
