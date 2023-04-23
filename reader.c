@@ -95,7 +95,7 @@ int main(int argc, char *argv[])
     }
 
     // read from the shared array
-    printf("%s", shared_array[0].studentID);
+    printf("%s %s %s\n", shared_array[0].studentID, shared_array[0].firstName, shared_array[0].lastName);
 
     printf("reader running...\n");
     while (1)
