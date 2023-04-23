@@ -19,13 +19,12 @@
 
 #define SHM_SIZE 1024
 
-// create a hashmap
-hash_table *h_table;
+studentRecord *shared_array = NULL;
 void cleanup_handler(int sig)
 {
 
     // Detach from the shared memory segment
-    if (shmdt(h_table) == -1)
+    if (shmdt(shared_array) == -1)
     {
         printf("detaching from shared memory segment failed");
         perror("shmdt");
@@ -38,20 +37,42 @@ void cleanup_handler(int sig)
     exit(0);
 }
 
+void create_semaphore(const char *name, sem_t **sem, int value)
+{
+    *sem = sem_open(name, O_CREAT | O_EXCL, 0666, value);
+    if (*sem == SEM_FAILED)
+    {
+        perror("Failed to create semaphore");
+        exit(EXIT_FAILURE);
+    }
+}
+
+void remove_semaphore(const char *name, sem_t *sem)
+{
+    if (sem_close(sem) == -1)
+    {
+        perror("Failed to close semaphore");
+        exit(EXIT_FAILURE);
+    }
+    if (sem_unlink(name) == -1)
+    {
+        perror("Failed to unlink semaphore");
+        exit(EXIT_FAILURE);
+    }
+}
+
 int main(int argc, char *argv[])
 {
-
-    h_table = init_hash_table();
+    // studentRecord *shared_array = NULL;
     signal(SIGINT, cleanup_handler); // register the cleanup handler
 
-    char *data;
     // Insert some sample entries
     studentRecord sr1 = {"00000001", "Smith", "John", {4.0, 3.5, 3.0, 0.0, 0.0, 0.0, 0.0, 0.0}, 3.50};
     studentRecord sr2 = {"a1c00002", "Johnson", "Mary", {3.5, 3.5, 3.0, 3.0, 0.0, 0.0, 0.0, 0.0}, 3.25};
     studentRecord sr3 = {"0#01a7c3", "Garcia", "Carlos", {4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0}, 4.00};
     studentRecord sr4 = {"00000004", "Lee", "Jae", {2.0, 1.5, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0}, 1.25};
 
-    // coordinator creates shared memory segment to store the hashmap
+    // coordinator creates shared memory segment to store shared data
     key_t key = 100;
     int shmid = shmget(key, SHM_SIZE, 0666 | IPC_CREAT);
     if (shmid == -1)
@@ -60,22 +81,18 @@ int main(int argc, char *argv[])
         exit(1);
     }
     // Attach shared memory segment
-    data = shmat(shmid, NULL, 0);
-    if (data == (char *)(-1))
+    shared_array = shmat(shmid, NULL, 0);
+    if (shared_array == (void *)(-1))
     {
         perror("Failed to attach shared memory");
         exit(EXIT_FAILURE);
     }
 
-    // Insert the records into the hashmap
-    // insert(h_table, sr1);
-    // insert(h_table, sr2);
-    // insert(h_table, sr3);
-    // insert(h_table, sr4);
-    printf("Write Data : ");
-    gets(data); // get input from user
+    shared_array[0] = sr1;
+    shared_array[1] = sr2;
+    shared_array[2] = sr3;
+    shared_array[3] = sr4;
 
-    printf("Data written in memory: %s\n", data);
     printf("coordinator running...\n");
     while (1)
     {
@@ -89,7 +106,7 @@ int main(int argc, char *argv[])
         }
     };
     // Detach from the shared memory segment
-    if (shmdt(data) == -1)
+    if (shmdt(shared_array) == -1)
     {
         printf("detaching from shared memory segment failed\n");
         perror("shmdt");
