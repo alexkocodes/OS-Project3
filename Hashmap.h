@@ -16,18 +16,16 @@ extern int H1_CONST;
 
 // Global variables for student records
 #define ID_LENGTH 9
-#define LAST_NAME_LENGTH 21
-#define FIRST_NAME_LENGTH 21
+#define NAME_LENGTH 20
 #define NUM_COURSES 8
 
 // Struct to hold information about a voter to be used as value in hash table
 typedef struct {
-    char studentID[ID_LENGTH];
-    char lastName[LAST_NAME_LENGTH];
-    char firstName[FIRST_NAME_LENGTH];
+    long studentID;
+    char lastName[NAME_LENGTH];
+    char firstName[NAME_LENGTH];
     float grades[NUM_COURSES];
     float GPA;
-    // int isBeingModified;
 } studentRecord;
 
 // Function to encode a string (in our case, the student ID)
