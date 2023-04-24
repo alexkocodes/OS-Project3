@@ -15,6 +15,7 @@
 #include <sys/shm.h>
 #include <semaphore.h>
 #include <fcntl.h>
+#include <errno.h>
 #include "Hashmap.h"
 
 #define SHM_SIZE 1024
@@ -35,6 +36,7 @@ void cleanup_handler(int sig)
     {
         printf("detaching from shared memory segment successful\n");
     }
+
     exit(0);
 }
 
@@ -95,7 +97,7 @@ int main(int argc, char *argv[])
     }
 
     // read from the shared array
-    printf("%s %s %s\n", shared_array[0].studentID, shared_array[0].firstName, shared_array[0].lastName);
+    // printf("%s %s %s\n", shared_array[0].studentID, shared_array[0].firstName, shared_array[0].lastName);
 
     printf("reader running...\n");
     while (1)
@@ -108,6 +110,44 @@ int main(int argc, char *argv[])
         if (strcmp(input, "exit\n") == 0)
         {
             break;
+        }
+        else if (strcmp(input, "test\n") == 0)
+        {
+            char *beginning = "/";
+            char name[strlen(beginning) + strlen(recid) + 1];
+            strcpy(name, beginning);
+            strcat(name, recid);
+            printf("%s status: ", name);
+            sem_t *sem = sem_open(name, O_CREAT | O_EXCL, 0666, 1);
+            if (sem == SEM_FAILED)
+            {
+                if (errno == EEXIST)
+                {
+                    printf("semaphore already exists\n");
+                    // Semaphore already exists
+                    sem = sem_open(name, 0);
+                    if (sem == SEM_FAILED)
+                    {
+                        perror("sem_open");
+                        exit(EXIT_FAILURE);
+                    }
+                }
+                else
+                {
+                    perror("sem_open");
+                    exit(EXIT_FAILURE);
+                }
+            }
+            else
+            {
+                // Semaphore did not exist, we created it
+                printf("semaphore created\n");
+                // destroy the semaphores
+                sleep(10);
+                sem_close(sem);
+                sem_unlink(name);
+                printf("semaphore closed\n");
+            }
         }
     };
     // Detach from the shared memory segment
@@ -123,5 +163,6 @@ int main(int argc, char *argv[])
     }
     // destroy the shared memory
     shmctl(shmid, IPC_RMID, NULL);
+
     exit(0);
 }
