@@ -112,11 +112,12 @@ int main(int argc, char *argv[])
         fread(&rec, sizeof(rec), 1, fpb);
         shared_array[i] = rec.studentID; // now just storing the studentID, but we probably don't need this
         // memcpy(&shared_array[i], &rec, sizeof(rec));
-        printf("%ld %-20s %-20s ",
-               rec.studentID, rec.lastName, rec.firstName);
-        for (j = 0; j < NUM_COURSES; j++)
-            printf("%4.2f ", rec.grades[j]);
-        printf("%4.2f\n", rec.GPA);
+        // printf("%ld %-20s %-20s ",
+        //        rec.studentID, rec.lastName, rec.firstName);
+        // for (j = 0; j < NUM_COURSES; j++)
+        //     printf("%4.2f ", rec.grades[j]);
+        // printf("%4.2f\n", rec.GPA);
+        // printf("studentID: %ld\n", shared_array[i]);
     }
 
     fclose(fpb);
