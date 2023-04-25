@@ -18,8 +18,9 @@
 #include "Hashmap.h"
 
 #define SHM_SIZE 1024
+#define BIN_DATA_FILE "Dataset-500.bin"
 
-studentRecord *shared_array = NULL;
+long *shared_array = NULL;
 void cleanup_handler(int sig)
 {
 
@@ -66,12 +67,6 @@ int main(int argc, char *argv[])
     // studentRecord *shared_array = NULL;
     signal(SIGINT, cleanup_handler); // register the cleanup handler
 
-    // Insert some sample entries
-    studentRecord sr1 = {"00000001", "Smith", "John", {4.0, 3.5, 3.0, 0.0, 0.0, 0.0, 0.0, 0.0}, 3.50};
-    studentRecord sr2 = {"a1c00002", "Johnson", "Mary", {3.5, 3.5, 3.0, 3.0, 0.0, 0.0, 0.0, 0.0}, 3.25};
-    studentRecord sr3 = {"0#01a7c3", "Garcia", "Carlos", {4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0}, 4.00};
-    studentRecord sr4 = {"00000004", "Lee", "Jae", {2.0, 1.5, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0}, 1.25};
-
     // coordinator creates shared memory segment to store shared data
     key_t key = 100;
     int shmid = shmget(key, SHM_SIZE, 0666 | IPC_CREAT);
@@ -88,10 +83,43 @@ int main(int argc, char *argv[])
         exit(EXIT_FAILURE);
     }
 
-    shared_array[0] = sr1;
-    shared_array[1] = sr2;
-    shared_array[2] = sr3;
-    shared_array[3] = sr4;
+    // open BIN file that contains records
+    FILE *fpb;
+    long lSize;
+    int numOfrecords;
+    int i, j;
+    studentRecord rec;
+    fpb = fopen(BIN_DATA_FILE, "rb");
+    if (fpb == NULL)
+    {
+        printf("Cannot open binary file\n");
+        return (1); // exit if not successful file opening
+    }
+
+    // check number of records stats in BIN file
+    fseek(fpb, 0, SEEK_END);
+    lSize = ftell(fpb);
+    rewind(fpb);
+    // check abobe lib calls: fseek, ftell, rewind
+    numOfrecords = (int)lSize / sizeof(rec);
+    // report what is found out of examining the BIN file
+    printf("Records found in file %d \n", numOfrecords);
+    sleep(1);
+
+    // Read the records from the BIN file and store them in the shared memory
+    for (i = 0; i < numOfrecords; i++)
+    {
+        fread(&rec, sizeof(rec), 1, fpb);
+        shared_array[i] = rec.studentID; // now just storing the studentID, but we probably don't need this
+        // memcpy(&shared_array[i], &rec, sizeof(rec));
+        printf("%ld %-20s %-20s ",
+               rec.studentID, rec.lastName, rec.firstName);
+        for (j = 0; j < NUM_COURSES; j++)
+            printf("%4.2f ", rec.grades[j]);
+        printf("%4.2f\n", rec.GPA);
+    }
+
+    fclose(fpb);
 
     printf("coordinator running...\n");
     while (1)

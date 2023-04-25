@@ -16,29 +16,29 @@ extern int H1_CONST;
 
 // Global variables for student records
 #define ID_LENGTH 9
-#define LAST_NAME_LENGTH 21
-#define FIRST_NAME_LENGTH 21
+#define NAME_LENGTH 20
 #define NUM_COURSES 8
 
 // Struct to hold information about a voter to be used as value in hash table
-typedef struct {
-    char studentID[ID_LENGTH];
-    char lastName[LAST_NAME_LENGTH];
-    char firstName[FIRST_NAME_LENGTH];
-    float grades[NUM_COURSES];
-    float GPA;
-    // int isBeingModified;
+typedef struct
+{
+  long studentID;
+  char lastName[NAME_LENGTH];
+  char firstName[NAME_LENGTH];
+  float grades[NUM_COURSES];
+  float GPA;
 } studentRecord;
 
 // Function to encode a string (in our case, the student ID)
 // into a long integer (for the hash table containing student records)
 // Courtesy of chatGPT and some rough mathematics
-long encodeString(char* str);
+long encodeString(char *str);
 
 // Struct to hold information about a node in a linked list
 // Key: int (PIN) for hash table
 // Value: Voter informaton
-typedef struct node {
+typedef struct node
+{
   char key[ID_LENGTH];
   studentRecord value;
   struct node *next;
@@ -67,7 +67,8 @@ void delete_nodes_from_end(node *head, int n);
 void print_linked_list(node *head);
 
 // Struct to hold information about a hash table
-typedef struct hash_table {
+typedef struct hash_table
+{
   int size;
   int cutoff;
   node **table;
