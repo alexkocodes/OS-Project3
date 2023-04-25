@@ -250,8 +250,6 @@ int main(int argc, char *argv[])
     {
         printf("detaching from shared memory segment successful\n");
     }
-    // destroy the shared memory
-    shmctl(shmid, IPC_RMID, NULL);
 
     exit(0);
 }
