@@ -20,7 +20,7 @@
 #define SHM_SIZE 1024
 #define BIN_DATA_FILE "Dataset-500.bin"
 
-int *shared_array = NULL;
+long *shared_array = NULL;
 void cleanup_handler(int sig)
 {
 
