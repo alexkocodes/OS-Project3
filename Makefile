@@ -2,32 +2,29 @@ CC = gcc
 CFLAGS = -Wall -g
 
 # list of source files
-SRCS = reader.c writer.c coordinator.c Hashmap.c
+SRCS = reader.c writer.c coordinator.c
 
 # list of object files
 OBJS = $(SRCS:.c=.o)
 
 # dependencies
-DEPS = Hashmap.h
+# DEPS = 
 
 # default target
 all: reader writer coordinator
 
 # compile the reader program
-reader: reader.o Hashmap.o
+reader: reader.o 
 	$(CC) $(CFLAGS) -o $@ $^
 
 # compile the writer program
-writer: writer.o Hashmap.o
+writer: writer.o 
 	$(CC) $(CFLAGS) -o $@ $^
 
 # compile the coordinator program
-coordinator: coordinator.o Hashmap.o
+coordinator: coordinator.o 
 	$(CC) $(CFLAGS) -o $@ $^
 
-# compile the Hashmap module
-Hashmap.o: Hashmap.c Hashmap.h
-	$(CC) $(CFLAGS) -c $<
 
 # clean up object files and executables
 clean:
