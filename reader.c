@@ -24,8 +24,9 @@
 
 FILE *fp; // file pointer
 
-// create a hashmap
 long *shared_array = NULL;
+sem_t *to_be_destroyed;
+char *name_to_be_destroyed;
 void cleanup_handler(int sig)
 {
 
@@ -40,33 +41,56 @@ void cleanup_handler(int sig)
     {
         printf("detaching from shared memory segment successful\n");
     }
-
+    sem_close(to_be_destroyed);
+    sem_unlink(name_to_be_destroyed);
     exit(0);
 }
 
 // Function to find a student record in the binary file given the student ID, array index, and output struct
-studentRecord *findRecord(long studentID, int index, const long* idArray) {
-  long targetID;
-  int targetIndex;
-  studentRecord *record = malloc(sizeof(studentRecord));
+studentRecord *findRecord(long studentID, int index, const long *idArray)
+{
+    long targetID;
+    int targetIndex;
+    studentRecord *record = malloc(sizeof(studentRecord));
 
-  targetID = idArray[index];
-  targetIndex = index;
-  
-  printf("SEEKING\n");
-  // Move file pointer to the position of the desired record
-  fseek(fp, targetIndex * sizeof(studentRecord), SEEK_SET);
+    targetID = idArray[index];
+    targetIndex = index;
 
-  printf("READING\n");
-  // Read the record at the desired position and check if its ID matches
-  if (fread(record, sizeof(studentRecord), 1, fp) == 1 && record->studentID == targetID) {
-    // Found matching record
-    return record;
-  }
-  else {
-    // ID not found or read error
-    return NULL;
-  }
+    // Move file pointer to the position of the desired record
+    fseek(fp, targetIndex * sizeof(studentRecord), SEEK_SET);
+
+    // Read the record at the desired position and check if its ID matches
+    if (fread(record, sizeof(studentRecord), 1, fp) == 1 && record->studentID == targetID)
+    {
+        // Found matching record
+        return record;
+    }
+    else
+    {
+        // ID not found or read error
+        return NULL;
+    }
+}
+
+// function to check if a write semaphore for this record exists
+bool checkWriteSem(char *name)
+{
+    sem_t *sem_write = sem_open(name, O_CREAT | O_EXCL, 0666, 1);
+    if (sem_write == SEM_FAILED)
+    {
+        if (errno == EEXIST)
+        {
+            // printf("There is a writer present\n");
+            return true;
+        }
+    }
+    else
+    {
+        sem_close(sem_write);
+        sem_unlink(name);
+        return false;
+    }
+    return false;
 }
 
 int main(int argc, char *argv[])
@@ -77,9 +101,6 @@ int main(int argc, char *argv[])
     long recid = 0;
     int time;
     char *shmid_input;
-
-    // open the binary file
-    fp = fopen(BIN_DATA_FILE, "rb");
 
     int i = 0;
     for (i = 0; i < argc; i++)
@@ -129,108 +150,60 @@ int main(int argc, char *argv[])
         exit(EXIT_FAILURE);
     }
 
-    // read from the shared array
-    // printf("%s %s %s\n", shared_array[0].studentID, shared_array[0].firstName, shared_array[0].lastName);
+    // open the binary file
+    fp = fopen(filename, "rb");
+    if (fp == NULL)
+    {
+        printf("Error opening file\n");
+        exit(1);
+    }
 
-    printf("reader running...\n");
+    bool firstPrint = true;
     while (1)
     {
 
-        // take user input and if the user types exit, then we break the while loop
-        char input[100];
-        printf("Enter a command: ");
-        fgets(input, 100, stdin);
-        if (strcmp(input, "exit\n") == 0)
+        char *beginning = "/r_";
+        char str_recid[20];
+        sprintf(str_recid, "%ld", recid);
+        char name[strlen(beginning) + strlen(str_recid) + 1];
+        strcpy(name, beginning);
+        strcat(name, str_recid);
+
+        // check if a write semaphore for this record exists
+        char *beginningW = "/w_";
+        char str_recidW[20];
+        sprintf(str_recidW, "%ld", recid);
+        char nameW[strlen(beginningW) + strlen(str_recidW) + 1];
+        strcpy(nameW, beginningW);
+        strcat(nameW, str_recidW);
+
+        if (checkWriteSem(nameW))
         {
-            break;
-        }
-        else if (strcmp(input, "test\n") == 0)
-        {
-            char *beginning = "/";
-            char str_recid[20];
-            sprintf(str_recid, "%ld", recid);
-            char name[strlen(beginning) + strlen(str_recid) + 1];
-            strcpy(name, beginning);
-            strcat(name, str_recid);
-            printf("%s status: ", name);
-            sem_t *sem_read = sem_open(name, O_CREAT | O_EXCL, 0666, MAX_READERS);
-            if (sem_read == SEM_FAILED)
+            if (firstPrint)
             {
-                if (errno == EEXIST)
-                {
-                    printf("semaphore already exists\n");
-                    // Semaphore already exists
-                    sem_read = sem_open(name, 0);
-                    if (sem_read == SEM_FAILED)
-                    {
-                        perror("sem_open");
-                        exit(EXIT_FAILURE);
-                    }
-                    // start reading
-                    if (sem_wait(sem_read) == -1)
-                    {
-                        perror("Failed to wait on read semaphore");
-                        exit(EXIT_FAILURE);
-                    }
+                printf("There is a writer present\n");
+                firstPrint = false;
+            }
+            continue;
+        }
 
-                    // loop througn the shared memory to find matching student id
-                    int i = 0;
-                    bool found = false;
-                    for (i = 0; i < 500; i++)
-                    {
+        printf("%s status: ", name);
+        sem_t *sem_read = sem_open(name, O_CREAT | O_EXCL, 0666, MAX_READERS);
 
-                        if (shared_array[i] == recid)
-                        {
-                            printf("found student record: %ld\n", shared_array[i]);
-                            studentRecord *temp_record = findRecord(recid, i, shared_array);
-                            if (temp_record != NULL) {
-                                printf("%ld %s %s\n", temp_record->studentID, temp_record->lastName, temp_record->firstName);
-                            } else {
-                                printf("Fuck\n");
-                            }
-                            // findRecord(recid, i, shared_array, record);
-                            // printf("recid: %ld\n", recid);
-                            found = true;
-                        }
-                    }
-                    if (found == false)
-                    {
-                        printf("student record not found\n");
-                        // printf("recid: %ld\n", recid);
-                    }
-                    sleep(10);
-                    // done reading
-                    if (sem_post(sem_read) == -1)
-                    {
-                        perror("Failed to signal read semaphore");
-                        exit(EXIT_FAILURE);
-                    }
-                    // check if the semaphore is empty
-                    // int value;
-                    // if (sem_getvalue(sem_read, &value) == -1)
-                    // {
-                    //     perror("Failed to get value of read semaphore");
-                    //     exit(EXIT_FAILURE);
-                    // }
-                    // if (value == MAX_READERS)
-                    // {
-                    printf("semaphore empty\n");
-                    // destroy the semaphores
-                    sem_close(sem_read);
-                    sem_unlink(name);
-                    printf("semaphore closed\n");
-                    // }
-                }
-                else
+        to_be_destroyed = sem_read;
+        name_to_be_destroyed = name;
+        if (sem_read == SEM_FAILED)
+        {
+            if (errno == EEXIST)
+            {
+                printf("semaphore already exists\n");
+                // Semaphore already exists
+                sem_read = sem_open(name, 0);
+                if (sem_read == SEM_FAILED)
                 {
                     perror("sem_open");
                     exit(EXIT_FAILURE);
                 }
-            }
-            else
-            {
-                // Semaphore did not exist, but we just created it. So we can start reading now.
-                printf("semaphore created\n");
                 // start reading
                 if (sem_wait(sem_read) == -1)
                 {
@@ -243,16 +216,16 @@ int main(int argc, char *argv[])
                 bool found = false;
                 for (i = 0; i < 500; i++)
                 {
+
                     if (shared_array[i] == recid)
                     {
                         printf("found student record: %ld\n", shared_array[i]);
                         studentRecord *temp_record = findRecord(recid, i, shared_array);
-                        if (temp_record != NULL) {
+                        if (temp_record != NULL)
+                        {
                             printf("%ld %s %s\n", temp_record->studentID, temp_record->lastName, temp_record->firstName);
-                        } else {
-                            printf("Fuck\n");
                         }
-                        // printf("recid: %ld\n", recid);
+
                         found = true;
                     }
                 }
@@ -261,30 +234,70 @@ int main(int argc, char *argv[])
                     printf("student record not found\n");
                     // printf("recid: %ld\n", recid);
                 }
-                sleep(10);
-
+                sleep(time);
                 // done reading
                 if (sem_post(sem_read) == -1)
                 {
                     perror("Failed to signal read semaphore");
                     exit(EXIT_FAILURE);
                 }
-                // check if the semaphore is empty
-                // int value;
-                // if (sem_getvalue(sem_read, &value) == -1)
-                // {
-                //     perror("Failed to get value of read semaphore");
-                //     exit(EXIT_FAILURE);
-                // }
-                // if (value == MAX_READERS)
-                // {
-                printf("semaphore empty\n");
+
                 // destroy the semaphores
                 sem_close(sem_read);
                 sem_unlink(name);
-                printf("semaphore closed\n");
-                // }
+                break;
             }
+            else
+            {
+                perror("sem_open");
+                exit(EXIT_FAILURE);
+            }
+        }
+        else
+        {
+            // Semaphore did not exist, but we just created it. So we can start reading now.
+            printf("semaphore created\n");
+            // start reading
+            if (sem_wait(sem_read) == -1)
+            {
+                perror("Failed to wait on read semaphore");
+                exit(EXIT_FAILURE);
+            }
+
+            // loop througn the shared memory to find matching student id
+            int i = 0;
+            bool found = false;
+            for (i = 0; i < 500; i++)
+            {
+                if (shared_array[i] == recid)
+                {
+                    printf("found student record: %ld\n", shared_array[i]);
+                    studentRecord *temp_record = findRecord(recid, i, shared_array);
+                    if (temp_record != NULL)
+                    {
+                        printf("%ld %s %s\n", temp_record->studentID, temp_record->lastName, temp_record->firstName);
+                    }
+                    found = true;
+                }
+            }
+            if (found == false)
+            {
+                printf("student record not found\n");
+                // printf("recid: %ld\n", recid);
+            }
+            sleep(time);
+
+            // done reading
+            if (sem_post(sem_read) == -1)
+            {
+                perror("Failed to signal read semaphore");
+                exit(EXIT_FAILURE);
+            }
+
+            // destroy the semaphores
+            sem_close(sem_read);
+            sem_unlink(name);
+            break;
         }
     };
     // Detach from the shared memory segment
