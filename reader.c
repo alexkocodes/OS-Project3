@@ -20,9 +20,12 @@
 
 #define SHM_SIZE 1024
 #define MAX_READERS 2 // max number of readers
+#define BIN_DATA_FILE "Dataset-500.bin"
+
+FILE *fp; // file pointer
 
 // create a hashmap
-studentRecord *shared_array = NULL;
+long *shared_array = NULL;
 void cleanup_handler(int sig)
 {
 
@@ -41,6 +44,31 @@ void cleanup_handler(int sig)
     exit(0);
 }
 
+// Function to find a student record in the binary file given the student ID, array index, and output struct
+studentRecord *findRecord(long studentID, int index, const long* idArray) {
+  long targetID;
+  int targetIndex;
+  studentRecord *record = malloc(sizeof(studentRecord));
+
+  targetID = idArray[index];
+  targetIndex = index;
+  
+  printf("SEEKING\n");
+  // Move file pointer to the position of the desired record
+  fseek(fp, targetIndex * sizeof(studentRecord), SEEK_SET);
+
+  printf("READING\n");
+  // Read the record at the desired position and check if its ID matches
+  if (fread(record, sizeof(studentRecord), 1, fp) == 1 && record->studentID == targetID) {
+    // Found matching record
+    return record;
+  }
+  else {
+    // ID not found or read error
+    return NULL;
+  }
+}
+
 int main(int argc, char *argv[])
 {
     signal(SIGINT, cleanup_handler); // register the cleanup handler
@@ -49,6 +77,9 @@ int main(int argc, char *argv[])
     long recid = 0;
     int time;
     char *shmid_input;
+
+    // open the binary file
+    fp = fopen(BIN_DATA_FILE, "rb");
 
     int i = 0;
     for (i = 0; i < argc; i++)
@@ -145,18 +176,27 @@ int main(int argc, char *argv[])
                     // loop througn the shared memory to find matching student id
                     int i = 0;
                     bool found = false;
-                    for (i = 0; i < 100; i++)
+                    for (i = 0; i < 500; i++)
                     {
 
-                        if (shared_array[i].studentID == recid)
+                        if (shared_array[i] == recid)
                         {
-                            printf("found student record: %ld\n", shared_array[i].studentID);
+                            printf("found student record: %ld\n", shared_array[i]);
+                            studentRecord *temp_record = findRecord(recid, i, shared_array);
+                            if (temp_record != NULL) {
+                                printf("%ld %s %s\n", temp_record->studentID, temp_record->lastName, temp_record->firstName);
+                            } else {
+                                printf("Fuck\n");
+                            }
+                            // findRecord(recid, i, shared_array, record);
+                            // printf("recid: %ld\n", recid);
                             found = true;
                         }
                     }
                     if (found == false)
                     {
                         printf("student record not found\n");
+                        // printf("recid: %ld\n", recid);
                     }
                     sleep(10);
                     // done reading
@@ -201,17 +241,25 @@ int main(int argc, char *argv[])
                 // loop througn the shared memory to find matching student id
                 int i = 0;
                 bool found = false;
-                for (i = 0; i < 100; i++)
+                for (i = 0; i < 500; i++)
                 {
-                    if (shared_array[i].studentID == recid)
+                    if (shared_array[i] == recid)
                     {
-                        printf("found student record: %ld\n", shared_array[i].studentID);
+                        printf("found student record: %ld\n", shared_array[i]);
+                        studentRecord *temp_record = findRecord(recid, i, shared_array);
+                        if (temp_record != NULL) {
+                            printf("%ld %s %s\n", temp_record->studentID, temp_record->lastName, temp_record->firstName);
+                        } else {
+                            printf("Fuck\n");
+                        }
+                        // printf("recid: %ld\n", recid);
                         found = true;
                     }
                 }
                 if (found == false)
                 {
                     printf("student record not found\n");
+                    // printf("recid: %ld\n", recid);
                 }
                 sleep(10);
 
