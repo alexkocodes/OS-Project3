@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -Wall -g
+CFLAGS = -Wall -g -pthread
 
 # list of source files
 SRCS = reader.c writer.c coordinator.c
