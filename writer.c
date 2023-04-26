@@ -25,8 +25,8 @@
 FILE *fp; // file pointer
 
 long *shared_array = NULL;
-sem_t *to_be_destroyed;
-char *name_to_be_destroyed;
+sem_t *to_be_destroyed = NULL;
+char *name_to_be_destroyed = "/to_be_destroyed";
 void cleanup_handler(int sig)
 {
 
