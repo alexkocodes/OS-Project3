@@ -231,7 +231,7 @@ int main(int argc, char *argv[])
     strcpy(name, beginning);
     strcat(name, str_recid);
 
-    // check if a write semaphore for this record exists
+    // check if a read semaphore for this record exists
     char *beginningR = "/r_";
     char str_recidR[20];
     sprintf(str_recidR, "%ld", recid);
@@ -305,9 +305,14 @@ int main(int argc, char *argv[])
           exit(EXIT_FAILURE);
         }
 
-        // destroy the semaphores
         sem_close(sem_writer);
-        sem_unlink(name);
+        int val = 0;
+        sem_getvalue(sem_writer, &val);
+        if (val == MAX_WRITER)
+        {
+          sem_unlink(name);
+          break;
+        }
         break;
       }
       else
@@ -362,16 +367,13 @@ int main(int argc, char *argv[])
         exit(EXIT_FAILURE);
       }
 
-      // destroy the semaphores
-      if (sem_close(sem_writer) == -1)
+      sem_close(sem_writer);
+      int val = 0;
+      sem_getvalue(sem_writer, &val);
+      if (val == MAX_WRITER)
       {
-        perror("Failed to close read semaphore");
-        exit(EXIT_FAILURE);
-      }
-      if (sem_unlink(name) == -1)
-      {
-        perror("Failed to unlink read semaphore");
-        exit(EXIT_FAILURE);
+        sem_unlink(name);
+        break;
       }
       break;
     }
