@@ -24,8 +24,9 @@
 #define MAX_WRITER 1
 FILE *fp; // file pointer
 
-// create a hashmap
 long *shared_array = NULL;
+sem_t *to_be_destroyed;
+char *name_to_be_destroyed;
 void cleanup_handler(int sig)
 {
 
@@ -40,7 +41,8 @@ void cleanup_handler(int sig)
   {
     printf("detaching from shared memory segment successful\n");
   }
-
+  sem_close(to_be_destroyed);
+  sem_unlink(name_to_be_destroyed);
   exit(0);
 }
 
@@ -133,6 +135,27 @@ int editRecord(long studentID, int index, const long *idArray)
   return 0;
 }
 
+// function to check if a read semaphore for this record exists
+bool checkReadSem(char *name)
+{
+  sem_t *sem_read = sem_open(name, O_CREAT | O_EXCL, 0666, 1);
+  if (sem_read == SEM_FAILED)
+  {
+    if (errno == EEXIST)
+    {
+      // printf("There is a reader present\n");
+      return true;
+    }
+  }
+  else
+  {
+    sem_close(sem_read);
+    sem_unlink(name);
+    return false;
+  }
+  return false;
+}
+
 int main(int argc, char *argv[])
 {
   signal(SIGINT, cleanup_handler); // register the cleanup handler
@@ -189,8 +212,6 @@ int main(int argc, char *argv[])
     exit(EXIT_FAILURE);
   }
 
-  printf("writer running...\n");
-
   // Open binary data file for reading and writing
   fp = fopen(filename, "rb+");
 
@@ -199,27 +220,107 @@ int main(int argc, char *argv[])
     printf("Error opening binary file\n");
     exit(1);
   }
-
-  char *beginning = "/";
-  char str_recid[20];
-  sprintf(str_recid, "%ld", recid);
-  char name[strlen(beginning) + strlen(str_recid) + 1];
-  strcpy(name, beginning);
-  strcat(name, str_recid);
-  printf("%s status: ", name);
-  sem_t *sem_writer = sem_open(name, O_CREAT | O_EXCL, 0666, MAX_WRITER);
-  if (sem_writer == SEM_FAILED)
+  bool firstPrint = true;
+  while (1)
   {
-    if (errno == EEXIST)
+
+    char *beginning = "/w_";
+    char str_recid[20];
+    sprintf(str_recid, "%ld", recid);
+    char name[strlen(beginning) + strlen(str_recid) + 1];
+    strcpy(name, beginning);
+    strcat(name, str_recid);
+
+    // check if a write semaphore for this record exists
+    char *beginningR = "/r_";
+    char str_recidR[20];
+    sprintf(str_recidR, "%ld", recid);
+    char nameR[strlen(beginningR) + strlen(str_recidR) + 1];
+    strcpy(nameR, beginningR);
+    strcat(nameR, str_recidR);
+
+    if (checkReadSem(nameR))
     {
-      printf("semaphore already exists\n");
-      // Semaphore already exists
-      sem_writer = sem_open(name, 0);
-      if (sem_writer == SEM_FAILED)
+      if (firstPrint)
+      {
+        printf("There is a reader present\n");
+        firstPrint = false;
+      }
+      continue;
+    }
+    printf("%s status: ", name);
+    sem_t *sem_writer = sem_open(name, O_CREAT | O_EXCL, 0666, MAX_WRITER);
+
+    to_be_destroyed = sem_writer;
+    name_to_be_destroyed = name;
+    if (sem_writer == SEM_FAILED)
+    {
+      if (errno == EEXIST)
+      {
+        printf("semaphore already exists\n");
+        // Semaphore already exists
+        sem_writer = sem_open(name, 0);
+        if (sem_writer == SEM_FAILED)
+        {
+          perror("sem_open");
+          exit(EXIT_FAILURE);
+        }
+        // start reading
+        printf("Waiting on semaphore...\n");
+        if (sem_wait(sem_writer) == -1)
+        {
+          perror("Failed to wait on read semaphore");
+          exit(EXIT_FAILURE);
+        }
+        printf("Semaphore acquired!\n");
+
+        // loop througn the shared memory to find matching student id
+        int i = 0;
+        bool found = false;
+        for (i = 0; i < 500; i++)
+        {
+
+          if (shared_array[i] == recid)
+          {
+            if (editRecord(recid, i, shared_array) == 0)
+            {
+              printf("Record updated successfully\n");
+            }
+            else
+            {
+              printf("Record not updated\n");
+            }
+            found = true;
+          }
+        }
+        if (found == false)
+        {
+          printf("student record not found\n");
+        }
+        sleep(time);
+        // done writing
+        if (sem_post(sem_writer) == -1)
+        {
+          perror("Failed to signal read semaphore");
+          exit(EXIT_FAILURE);
+        }
+
+        // destroy the semaphores
+        sem_close(sem_writer);
+        sem_unlink(name);
+        break;
+      }
+      else
       {
         perror("sem_open");
         exit(EXIT_FAILURE);
       }
+    }
+    else
+    {
+      // Semaphore did not exist, but we just created it. So we can start reading now.
+      printf("semaphore created\n");
+
       // start reading
       printf("Waiting on semaphore...\n");
       if (sem_wait(sem_writer) == -1)
@@ -234,16 +335,15 @@ int main(int argc, char *argv[])
       bool found = false;
       for (i = 0; i < 500; i++)
       {
-
         if (shared_array[i] == recid)
         {
           if (editRecord(recid, i, shared_array) == 0)
           {
-            printf("Record updated successfully\n");
+            printf("Record edited successfully\n");
           }
           else
           {
-            printf("Record not updated\n");
+            printf("Record not edited\n");
           }
           found = true;
         }
@@ -251,9 +351,11 @@ int main(int argc, char *argv[])
       if (found == false)
       {
         printf("student record not found\n");
+        // printf("recid: %ld\n", recid);
       }
       sleep(time);
-      // done writing
+
+      // done reading
       if (sem_post(sem_writer) == -1)
       {
         perror("Failed to signal read semaphore");
@@ -261,71 +363,17 @@ int main(int argc, char *argv[])
       }
 
       // destroy the semaphores
-      sem_close(sem_writer);
-      sem_unlink(name);
-    }
-    else
-    {
-      perror("sem_open");
-      exit(EXIT_FAILURE);
-    }
-  }
-  else
-  {
-    // Semaphore did not exist, but we just created it. So we can start reading now.
-    printf("semaphore created\n");
-
-    // start reading
-    printf("Waiting on semaphore...\n");
-    if (sem_wait(sem_writer) == -1)
-    {
-      perror("Failed to wait on read semaphore");
-      exit(EXIT_FAILURE);
-    }
-    printf("Semaphore acquired!\n");
-
-    // loop througn the shared memory to find matching student id
-    int i = 0;
-    bool found = false;
-    for (i = 0; i < 500; i++)
-    {
-      if (shared_array[i] == recid)
+      if (sem_close(sem_writer) == -1)
       {
-        if (editRecord(recid, i, shared_array) == 0)
-        {
-          printf("Record edited successfully\n");
-        }
-        else
-        {
-          printf("Record not edited\n");
-        }
-        found = true;
+        perror("Failed to close read semaphore");
+        exit(EXIT_FAILURE);
       }
-    }
-    if (found == false)
-    {
-      printf("student record not found\n");
-      // printf("recid: %ld\n", recid);
-    }
-    sleep(time);
-
-    // done reading
-    if (sem_post(sem_writer) == -1)
-    {
-      perror("Failed to signal read semaphore");
-      exit(EXIT_FAILURE);
-    }
-
-    // destroy the semaphores
-    if (sem_close(sem_writer) == -1)
-    {
-      perror("Failed to close read semaphore");
-      exit(EXIT_FAILURE);
-    }
-    if (sem_unlink(name) == -1)
-    {
-      perror("Failed to unlink read semaphore");
-      exit(EXIT_FAILURE);
+      if (sem_unlink(name) == -1)
+      {
+        perror("Failed to unlink read semaphore");
+        exit(EXIT_FAILURE);
+      }
+      break;
     }
   }
 
