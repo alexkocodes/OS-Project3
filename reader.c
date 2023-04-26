@@ -5,6 +5,7 @@
 #include <stdbool.h>
 #include <unistd.h>
 #include <sys/stat.h>
+#include <sys/sem.h>
 #include <math.h>
 #include <fcntl.h>
 #include <sys/wait.h>
@@ -19,7 +20,7 @@
 #include "Hashmap.h"
 
 #define SHM_SIZE 1024
-#define MAX_READERS 2 // max number of readers
+#define MAX_READERS 2 // max number of readers per record
 #define BIN_DATA_FILE "Dataset-500.bin"
 
 FILE *fp; // file pointer
@@ -192,10 +193,16 @@ int main(int argc, char *argv[])
 
         to_be_destroyed = sem_read;
         name_to_be_destroyed = name;
+
+        // int val = 0;
+        // sem_getvalue(sem_read, &val);
+        // printf("Semaphore value: %d\n", val);
+
         if (sem_read == SEM_FAILED)
         {
             if (errno == EEXIST)
             {
+
                 printf("semaphore already exists\n");
                 // Semaphore already exists
                 sem_read = sem_open(name, 0);
@@ -242,9 +249,14 @@ int main(int argc, char *argv[])
                     exit(EXIT_FAILURE);
                 }
 
-                // destroy the semaphores
                 sem_close(sem_read);
-                sem_unlink(name);
+                int val = 0;
+                sem_getvalue(sem_read, &val);
+                if (val == MAX_READERS)
+                {
+                    sem_unlink(name);
+                    break;
+                }
                 break;
             }
             else
@@ -293,10 +305,15 @@ int main(int argc, char *argv[])
                 perror("Failed to signal read semaphore");
                 exit(EXIT_FAILURE);
             }
-
-            // destroy the semaphores
+            // destroy the semaphores only when the last reader is done
             sem_close(sem_read);
-            sem_unlink(name);
+            int val = 0;
+            sem_getvalue(sem_read, &val);
+            if (val == MAX_READERS)
+            {
+                sem_unlink(name);
+                break;
+            }
             break;
         }
     };
