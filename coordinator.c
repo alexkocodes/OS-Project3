@@ -88,6 +88,13 @@ void remove_semaphore(const char *name, sem_t *sem)
 
 int main(int argc, char *argv[])
 {
+
+    sem_unlink("/records_accessed");
+    sem_unlink("/records_modified");
+    sem_unlink("/readers_encountered");
+    sem_unlink("/writers_encountered");
+    exit(0);
+
     // studentRecord *shared_array = NULL;
     signal(SIGINT, cleanup_handler); // register the cleanup handler
 
@@ -115,8 +122,6 @@ int main(int argc, char *argv[])
     sem_t *writers_encountered;
     sem_t *records_accessed;
     sem_t *records_modified;
-    sem_unlink("/records_accessed");
-    sem_unlink("/records_modified");
     create_semaphore("/readers_encountered", &readers_encountered, 0);
     create_semaphore("/writers_encountered", &writers_encountered, 0);
     create_semaphore("/records_accessed", &records_accessed, 0);
