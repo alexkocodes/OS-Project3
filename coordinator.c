@@ -88,6 +88,13 @@ void remove_semaphore(const char *name, sem_t *sem)
 
 int main(int argc, char *argv[])
 {
+
+    // sem_unlink("/records_accessed");
+    // sem_unlink("/records_modified");
+    // sem_unlink("/readers_encountered");
+    // sem_unlink("/writers_encountered");
+    // exit(0);
+
     // studentRecord *shared_array = NULL;
     signal(SIGINT, cleanup_handler); // register the cleanup handler
 
@@ -113,8 +120,12 @@ int main(int argc, char *argv[])
 
     sem_t *readers_encountered;
     sem_t *writers_encountered;
+    sem_t *records_accessed;
+    sem_t *records_modified;
     create_semaphore("/readers_encountered", &readers_encountered, 0);
     create_semaphore("/writers_encountered", &writers_encountered, 0);
+    create_semaphore("/records_accessed", &records_accessed, 0);
+    create_semaphore("/records_modified", &records_modified, 0);
 
     key_t reader_time_key = 200;
     int reader_time_shmid = shmget(reader_time_key, sizeof(double), 0666 | IPC_CREAT);
@@ -150,7 +161,7 @@ int main(int argc, char *argv[])
     FILE *fpb;
     long lSize;
     int numOfrecords;
-    int i, j;
+    int i;
     studentRecord rec;
     fpb = fopen(BIN_DATA_FILE, "rb");
     if (fpb == NULL)
@@ -208,12 +219,11 @@ int main(int argc, char *argv[])
     {
         printf("detaching from shared memory segment successful\n");
     }
-    printf("FUCK\n");
     // destroy the shared memory
     shmctl(shmid, IPC_RMID, NULL);
     // Print out the number of readers and writers encountered
     int readers, writers;
-    printf("FUCK\n");
+
     sem_getvalue(readers_encountered, &readers);
     sem_getvalue(writers_encountered, &writers);
     printf("Number of readers encountered: %d\n", readers);
@@ -227,6 +237,19 @@ int main(int argc, char *argv[])
     // Print the average time taken by readers and writers
     printf("Average time taken by readers: %.2f\n", *total_reader_time / readers);
     printf("Average time taken by writers: %.2f\n", *total_writer_time / writers);
+
+    // Print the number of records accessed and modified
+    int accessed, modified;
+    sem_getvalue(records_accessed, &accessed);
+    sem_getvalue(records_modified, &modified);
+    printf("Number of records accessed: %d\n", accessed);
+    printf("Number of records modified: %d\n", modified);
+
+    // destory the semaphores for records
+    sem_close(records_accessed);
+    sem_close(records_modified);
+    sem_unlink("/records_accessed");
+    sem_unlink("/records_modified");
 
     // Detach from the shared memory segment
     if (shmdt(total_reader_time) == -1)

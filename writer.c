@@ -288,6 +288,19 @@ int main(int argc, char *argv[])
             if (editRecord(recid, i, shared_array) == 0)
             {
               printf("Record updated successfully\n");
+              // update the records_modified semaphore by 1
+              sem_t *records_modified = sem_open("/records_modified", 0);
+              if (records_modified == SEM_FAILED)
+              {
+                perror("sem_open");
+                exit(EXIT_FAILURE);
+              }
+              if (sem_post(records_modified) == -1)
+              {
+                perror("Failed to signal records_modified semaphore");
+                exit(EXIT_FAILURE);
+              }
+              sem_close(records_modified);
             }
             else
             {
@@ -308,16 +321,8 @@ int main(int argc, char *argv[])
           exit(EXIT_FAILURE);
         }
 
-        // destroy the semaphores only when the last reader is done
         sem_close(sem_writer);
         sem_unlink(name);
-        // int val = 0;
-        // sem_getvalue(sem_read, &val);
-        // if (val == MAX_READERS)
-        // {
-        //     sem_unlink(name);
-        //     break;
-        // }
         break;
       }
       else
@@ -350,6 +355,19 @@ int main(int argc, char *argv[])
           if (editRecord(recid, i, shared_array) == 0)
           {
             printf("Record edited successfully\n");
+            // update the records_modified semaphore by 1
+            sem_t *records_modified = sem_open("/records_modified", 0);
+            if (records_modified == SEM_FAILED)
+            {
+              perror("sem_open");
+              exit(EXIT_FAILURE);
+            }
+            if (sem_post(records_modified) == -1)
+            {
+              perror("Failed to signal records_modified semaphore");
+              exit(EXIT_FAILURE);
+            }
+            sem_close(records_modified);
           }
           else
           {
@@ -375,13 +393,6 @@ int main(int argc, char *argv[])
       // destroy the semaphores only when the last reader is done
       sem_close(sem_writer);
       sem_unlink(name);
-      // int val = 0;
-      // sem_getvalue(sem_read, &val);
-      // if (val == MAX_READERS)
-      // {
-      //     sem_unlink(name);
-      //     break;
-      // }
       break;
     }
   }
