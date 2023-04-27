@@ -231,6 +231,13 @@ int main(int argc, char *argv[])
     printf("Average time taken by readers: %.2f\n", *total_reader_time / readers);
     printf("Average time taken by writers: %.2f\n", *total_writer_time / writers);
 
+    // Print the number of records accessed and modified
+    int accessed, modified;
+    sem_getvalue(records_accessed, &accessed);
+    sem_getvalue(records_modified, &modified);
+    printf("Number of records accessed: %d\n", accessed);
+    printf("Number of records modified: %d\n", modified);
+
     // Detach from the shared memory segment
     if (shmdt(total_reader_time) == -1)
     {
