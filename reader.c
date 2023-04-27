@@ -100,7 +100,7 @@ int main(int argc, char *argv[])
 
     char *filename;
     long recid = 0;
-    int time;
+    int time_arg;
     char *shmid_input;
 
     int i = 0;
@@ -119,8 +119,8 @@ int main(int argc, char *argv[])
         }
         if (strcmp(argv[i], "-d") == 0)
         {
-            time = atoi(argv[i + 1]);
-            // printf("%d", time);
+            time_arg = atoi(argv[i + 1]);
+            // printf("%d", time_arg);
         }
         if (strcmp(argv[i], "-s") == 0)
         {
@@ -150,6 +150,9 @@ int main(int argc, char *argv[])
         perror("Failed to attach shared memory");
         exit(EXIT_FAILURE);
     }
+
+    // Get the current time (i.e., time at which reader started)
+    time_t startTime = time(NULL);
 
     // open the binary file
     fp = fopen(filename, "rb");
@@ -237,7 +240,7 @@ int main(int argc, char *argv[])
                     printf("student record not found\n");
                     // printf("recid: %ld\n", recid);
                 }
-                sleep(time);
+                sleep(time_arg);
                 // done reading
                 if (sem_post(sem_read) == -1)
                 {
@@ -298,7 +301,7 @@ int main(int argc, char *argv[])
                 printf("student record not found\n");
                 // printf("recid: %ld\n", recid);
             }
-            sleep(time);
+            sleep(time_arg);
 
             // done reading
             if (sem_post(sem_read) == -1)
@@ -332,6 +335,60 @@ int main(int argc, char *argv[])
     else
     {
         printf("detaching from shared memory segment successful\n");
+    }
+
+    // Update the readers_encountered semaphore created by the coordinator
+    sem_t *sem_readers_encountered = sem_open("/readers_encountered", 0);
+    if (sem_readers_encountered == SEM_FAILED)
+  {
+    perror("sem_open");
+    exit(EXIT_FAILURE);
+  }
+  if (sem_post(sem_readers_encountered) == -1)
+  {
+    perror("Failed to signal writers_encountered semaphore");
+    exit(EXIT_FAILURE);
+  }
+    sem_close(sem_readers_encountered);
+
+    // Get the end time
+    time_t endTime = time(NULL);
+    // Calculate the total time elapsed
+    double time_taken = difftime(endTime, startTime);
+    printf("time taken: %f\n", time_taken);
+
+    // access the total_reader_time from its shared memory segment and update it (key = 200)
+    int shmid_total_reader_time = shmget(200, sizeof(double), 0666);
+    if (shmid_total_reader_time == -1)
+    {
+        printf("accessing total_reader_time shared memory segment failed\n");
+        perror("shmget");
+        exit(1);
+    }
+    else
+    {
+        double *total_reader_time = (double *)shmat(shmid_total_reader_time, NULL, 0);
+        if (total_reader_time == (double *)-1)
+        {
+            printf("attaching to total_reader_time shared memory segment failed\n");
+            perror("shmat");
+            exit(1);
+        }
+        else
+        {
+            *total_reader_time += time_taken;
+        }
+        // Detach from the shared memory segment
+        if (shmdt(total_reader_time) == -1)
+        {
+            printf("detaching from total_reader_time shared memory segment failed\n");
+            perror("shmdt");
+            exit(1);
+        }
+        else
+        {
+            printf("detaching from total_reader_time shared memory segment successful\n");
+        }
     }
 
     exit(0);
