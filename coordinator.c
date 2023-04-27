@@ -115,6 +115,8 @@ int main(int argc, char *argv[])
     sem_t *writers_encountered;
     sem_t *records_accessed;
     sem_t *records_modified;
+    sem_unlink("/records_accessed");
+    sem_unlink("/records_modified");
     create_semaphore("/readers_encountered", &readers_encountered, 0);
     create_semaphore("/writers_encountered", &writers_encountered, 0);
     create_semaphore("/records_accessed", &records_accessed, 0);
@@ -237,6 +239,12 @@ int main(int argc, char *argv[])
     sem_getvalue(records_modified, &modified);
     printf("Number of records accessed: %d\n", accessed);
     printf("Number of records modified: %d\n", modified);
+
+    // destory the semaphores for records
+    sem_close(records_accessed);
+    sem_close(records_modified);
+    sem_unlink("/records_accessed");
+    sem_unlink("/records_modified");
 
     // Detach from the shared memory segment
     if (shmdt(total_reader_time) == -1)
