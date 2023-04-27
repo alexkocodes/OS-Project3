@@ -235,8 +235,16 @@ int main(int argc, char *argv[])
     sem_unlink("/writers_encountered");
 
     // Print the average time taken by readers and writers
+    if (readers > 0) {
     printf("Average time taken by readers: %.2f\n", *total_reader_time / readers);
+    } else {
+        printf("No readers encountered. Can't compute average duration\n");
+    }
+    if (writers > 0) {
     printf("Average time taken by writers: %.2f\n", *total_writer_time / writers);
+    } else {
+        printf("No writers encountered. Can't compute average duration\n");
+    }
 
     // Print the number of records accessed and modified
     int accessed, modified;
