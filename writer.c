@@ -379,7 +379,6 @@ int main(int argc, char *argv[])
       if (found == false)
       {
         printf("student record not found\n");
-        // printf("recid: %ld\n", recid);
       }
       sleep(time_arg);
 
