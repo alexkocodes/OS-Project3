@@ -156,6 +156,16 @@ bool checkReadSem(char *name)
   return false;
 }
 
+char *getTime()
+{
+  // get current time in seconds since epoch
+  time_t now;
+  now = time(NULL);
+
+  char *timestamp = strtok(ctime(&now), "\n");
+  return timestamp;
+}
+
 int main(int argc, char *argv[])
 {
   signal(SIGINT, cleanup_handler); // register the cleanup handler
@@ -223,6 +233,20 @@ int main(int argc, char *argv[])
     printf("Error opening binary file\n");
     exit(1);
   }
+
+  // create a text file for logging
+  FILE *fptxt;
+  fptxt = fopen("log.txt", "a");
+  if (fptxt == NULL)
+  {
+    printf("Error opening file!\n");
+    exit(1);
+  }
+  pid_t pid = getpid();
+  char *timestamp = getTime();
+  fprintf(fptxt, "%s: writer %d enters the session.\n", timestamp, pid);
+  fflush(fptxt);
+
   bool firstPrint = true;
   while (1)
   {
@@ -248,9 +272,13 @@ int main(int argc, char *argv[])
       {
         printf("There is a reader present\n");
         firstPrint = false;
+        timestamp = getTime();
+        fprintf(fptxt, "%s: writer %d is waiting because there is a reader present.\n", timestamp, pid);
+        fflush(fptxt);
       }
       continue;
     }
+
     printf("%s status: ", name);
     sem_t *sem_writer = sem_open(name, O_CREAT | O_EXCL, 0666, MAX_WRITER);
 
@@ -268,7 +296,10 @@ int main(int argc, char *argv[])
           perror("sem_open");
           exit(EXIT_FAILURE);
         }
-        // start reading
+        // start writing
+        timestamp = getTime();
+        fprintf(fptxt, "%s: writer %d is waiting on semaphore %s.\n", timestamp, pid, name);
+        fflush(fptxt);
         printf("Waiting on semaphore...\n");
         if (sem_wait(sem_writer) == -1)
         {
@@ -276,7 +307,11 @@ int main(int argc, char *argv[])
           exit(EXIT_FAILURE);
         }
         printf("Semaphore acquired!\n");
-
+        timestamp = getTime();
+        fprintf(fptxt, "%s: writer %d has acquired semaphore %s.\n", timestamp, pid, name);
+        fflush(fptxt);
+        fprintf(fptxt, "%s: writer %d has now begun its work.\n", timestamp, pid);
+        fflush(fptxt);
         // loop througn the shared memory to find matching student id
         int i = 0;
         bool found = false;
@@ -315,12 +350,15 @@ int main(int argc, char *argv[])
         }
         sleep(time_arg);
         // done writing
+
         if (sem_post(sem_writer) == -1)
         {
           perror("Failed to signal read semaphore");
           exit(EXIT_FAILURE);
         }
-
+        timestamp = getTime();
+        fprintf(fptxt, "%s: writer %d has now finished its work.\n", timestamp, pid);
+        fflush(fptxt);
         sem_close(sem_writer);
         sem_unlink(name);
         break;
@@ -336,7 +374,10 @@ int main(int argc, char *argv[])
       // Semaphore did not exist, but we just created it. So we can start reading now.
       printf("semaphore created\n");
 
-      // start reading
+      // start writing
+      timestamp = getTime();
+      fprintf(fptxt, "%s: writer %d is waiting on semaphore %s.\n", timestamp, pid, name);
+      fflush(fptxt);
       printf("Waiting on semaphore...\n");
       if (sem_wait(sem_writer) == -1)
       {
@@ -344,7 +385,11 @@ int main(int argc, char *argv[])
         exit(EXIT_FAILURE);
       }
       printf("Semaphore acquired!\n");
-
+      timestamp = getTime();
+      fprintf(fptxt, "%s: writer %d has acquired semaphore %s.\n", timestamp, pid, name);
+      fflush(fptxt);
+      fprintf(fptxt, "%s: writer %d has now begun its work.\n", timestamp, pid);
+      fflush(fptxt);
       // loop througn the shared memory to find matching student id
       int i = 0;
       bool found = false;
@@ -388,7 +433,9 @@ int main(int argc, char *argv[])
         perror("Failed to signal read semaphore");
         exit(EXIT_FAILURE);
       }
-
+      timestamp = getTime();
+      fprintf(fptxt, "%s: writer %d has now finished its work.\n", timestamp, pid);
+      fflush(fptxt);
       // destroy the semaphores only when the last reader is done
       sem_close(sem_writer);
       sem_unlink(name);
