@@ -72,8 +72,104 @@ studentRecord *findRecord(long studentID, int index, const long *idArray)
   }
 }
 
+int read_int_within_timeout(int timeout_seconds, int *result)
+{
+  char input[256];
+  time_t start_time = time(NULL); // Current time
+  time_t end_time = start_time + timeout_seconds;
+  int fd = fileno(stdin);
+
+  // Set stdin to non-blocking mode
+  int flags = fcntl(fd, F_GETFL, 0);
+  fcntl(fd, F_SETFL, flags | O_NONBLOCK);
+
+  printf(">> ");
+  fflush(stdout); // Make sure the prompt is actually printed
+
+  // Loop until timeout has elapsed
+  while (time(NULL) < end_time)
+  {
+
+    // Attempt to read input from the user
+    int n = read(fd, input, sizeof(input));
+
+    // Check if input was received
+    if (n > 0)
+    {
+      // Stop reading as soon as the user hits enter
+      if (input[n - 1] == '\n')
+      {
+        input[n - 1] = '\0'; // Replace newline with null terminator
+        // Attempt to parse input as an integer
+        if (sscanf(input, "%d", result) == 1)
+        {
+          return 0; // Success
+        }
+        else
+        {
+          printf("Invalid input: %s\n", input);
+        }
+        break; // Stop reading
+      }
+    }
+
+    // Sleep for 1 second
+    sleep(1);
+  }
+
+  return -1; // Timeout expired
+}
+
+int read_float_within_timeout(int timeout_seconds, float *result)
+{
+  char input[256];
+  time_t start_time = time(NULL); // Current time
+  time_t end_time = start_time + timeout_seconds;
+  int fd = fileno(stdin);
+
+  // Set stdin to non-blocking mode
+  int flags = fcntl(fd, F_GETFL, 0);
+  fcntl(fd, F_SETFL, flags | O_NONBLOCK);
+
+  printf("Please enter the new grade (on a scale of 0.0 to 4.0): ");
+  fflush(stdout); // Make sure the prompt is printed immediately
+
+  // Loop until timeout has elapsed
+  while (time(NULL) < end_time)
+  {
+
+    // Attempt to read input from the user
+    int n = read(fd, input, sizeof(input));
+
+    // Check if input was received
+    if (n > 0)
+    {
+      // Check if the user hit enter
+      if (input[n - 1] == '\n')
+      {
+        input[n - 1] = '\0'; // Replace newline with null terminator
+
+        // Attempt to parse input as a float
+        if (sscanf(input, "%f", result) == 1)
+        {
+          return 0; // Success
+        }
+        else
+        {
+          printf("Invalid input: %s\n", input);
+        }
+      }
+    }
+
+    // Sleep for 1 second
+    sleep(1);
+  }
+
+  return -1; // Timeout expired
+}
+
 // Function to edit the record in the binary file given the student ID and array index
-int editRecord(long studentID, int index, const long *idArray)
+int editRecord(long studentID, int index, const long *idArray, const double start_time, const int total_process_time)
 {
   printf("----------------------------\n");
   // Call the findRecord function to get the record to edit
@@ -102,13 +198,22 @@ int editRecord(long studentID, int index, const long *idArray)
 
   // Get the course number to edit
   int courseNum;
-  printf(">>");
-  scanf("%d", &courseNum);
+  // Time left to get required input = total_process_time - (time elapsed since start of process)
+  int time_left = total_process_time - (time(NULL) - start_time);
+  if (read_int_within_timeout(time_left, &courseNum) == -1)
+  {
+    printf("Timeout expired\n");
+    return -2;
+  }
 
   // Get the new grade
   float newGrade;
-  printf("Please enter the new grade (on a scale of 0.0 to 4.0): ");
-  scanf("%f", &newGrade);
+  time_left = total_process_time - (time(NULL) - start_time);
+  if (read_float_within_timeout(time_left, &newGrade) == -1)
+  {
+    printf("Timeout expired\n");
+    return -2;
+  }
   // new grad has to be between 0 to 4
   while (newGrade < 0 || newGrade > 4)
   {
@@ -320,7 +425,7 @@ int main(int argc, char *argv[])
 
           if (shared_array[i] == recid)
           {
-            if (editRecord(recid, i, shared_array) == 0)
+            if (editRecord(recid, i, shared_array, startTime, time_arg) == 0)
             {
               printf("Record updated successfully\n");
               // update the records_modified semaphore by 1
@@ -337,20 +442,24 @@ int main(int argc, char *argv[])
               }
               sem_close(records_modified);
             }
+            else if (editRecord(recid, i, shared_array, startTime, time_arg) == -1)
+            {
+              printf("Record not found\n");
+            }
             else
             {
-              printf("Record not updated\n");
+              // We've run out of time, so we need to exit
+              printf("Writer process ran out of time\n");
+              goto doneWriting_semExists;
             }
-            found = true;
           }
         }
-        if (found == false)
-        {
-          printf("student record not found\n");
-        }
-        sleep(time_arg);
-        // done writing
-
+        // Get time left (time_arg - (current time - start time)))
+        int timeLeft = time_arg - (time(NULL) - startTime);
+        // sleep for the remaining time
+        sleep(timeLeft);
+      // done writing
+      doneWriting_semExists:
         if (sem_post(sem_writer) == -1)
         {
           perror("Failed to signal read semaphore");
@@ -371,7 +480,7 @@ int main(int argc, char *argv[])
     }
     else
     {
-      // Semaphore did not exist, but we just created it. So we can start reading now.
+      // Semaphore did not exist, but we just created it. So we can start writing now.
       printf("semaphore created\n");
 
       // start writing
@@ -397,7 +506,7 @@ int main(int argc, char *argv[])
       {
         if (shared_array[i] == recid)
         {
-          if (editRecord(recid, i, shared_array) == 0)
+          if (editRecord(recid, i, shared_array, startTime, time_arg) == 0)
           {
             printf("Record edited successfully\n");
             // update the records_modified semaphore by 1
@@ -414,20 +523,25 @@ int main(int argc, char *argv[])
             }
             sem_close(records_modified);
           }
+          else if (editRecord(recid, i, shared_array, startTime, time_arg) == -1)
+          {
+            printf("Record not found\n");
+          }
           else
           {
-            printf("Record not edited\n");
+            // We've run out of time, so we need to exit
+            printf("Writer process ran out of time\n");
+            goto doneWriting_semDidNotExist;
           }
-          found = true;
         }
       }
-      if (found == false)
-      {
-        printf("student record not found\n");
-      }
-      sleep(time_arg);
+      // Get time left (time_arg - (current time - start time)))
+      int timeLeft = time_arg - (time(NULL) - startTime);
+      // sleep for the remaining time
+      sleep(timeLeft);
 
-      // done writing
+    // done writing
+    doneWriting_semDidNotExist:
       if (sem_post(sem_writer) == -1)
       {
         perror("Failed to signal read semaphore");
