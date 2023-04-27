@@ -113,8 +113,12 @@ int main(int argc, char *argv[])
 
     sem_t *readers_encountered;
     sem_t *writers_encountered;
+    sem_t *records_accessed;
+    sem_t *records_modified;
     create_semaphore("/readers_encountered", &readers_encountered, 0);
     create_semaphore("/writers_encountered", &writers_encountered, 0);
+    create_semaphore("/records_accessed", &records_accessed, 0);
+    create_semaphore("/records_modified", &records_modified, 0);
 
     key_t reader_time_key = 200;
     int reader_time_shmid = shmget(reader_time_key, sizeof(double), 0666 | IPC_CREAT);
@@ -150,7 +154,7 @@ int main(int argc, char *argv[])
     FILE *fpb;
     long lSize;
     int numOfrecords;
-    int i, j;
+    int i;
     studentRecord rec;
     fpb = fopen(BIN_DATA_FILE, "rb");
     if (fpb == NULL)
@@ -208,12 +212,11 @@ int main(int argc, char *argv[])
     {
         printf("detaching from shared memory segment successful\n");
     }
-    printf("FUCK\n");
     // destroy the shared memory
     shmctl(shmid, IPC_RMID, NULL);
     // Print out the number of readers and writers encountered
     int readers, writers;
-    printf("FUCK\n");
+
     sem_getvalue(readers_encountered, &readers);
     sem_getvalue(writers_encountered, &writers);
     printf("Number of readers encountered: %d\n", readers);

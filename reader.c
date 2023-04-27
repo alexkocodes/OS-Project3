@@ -233,6 +233,19 @@ int main(int argc, char *argv[])
                         }
 
                         found = true;
+                        // update the records_accessed semaphore by 1
+                        sem_t *records_accessed = sem_open("/records_accessed", 0);
+                        if (records_accessed == SEM_FAILED)
+                        {
+                            perror("sem_open");
+                            exit(EXIT_FAILURE);
+                        }
+                        if (sem_post(records_accessed) == -1)
+                        {
+                            perror("Failed to signal records_accessed semaphore");
+                            exit(EXIT_FAILURE);
+                        }
+                        sem_close(records_accessed);
                     }
                 }
                 if (found == false)
@@ -294,6 +307,19 @@ int main(int argc, char *argv[])
                         printf("%ld %s %s\n", temp_record->studentID, temp_record->lastName, temp_record->firstName);
                     }
                     found = true;
+                    // update the records_accessed semaphore by 1
+                    sem_t *records_accessed = sem_open("/records_accessed", 0);
+                    if (records_accessed == SEM_FAILED)
+                    {
+                        perror("sem_open");
+                        exit(EXIT_FAILURE);
+                    }
+                    if (sem_post(records_accessed) == -1)
+                    {
+                        perror("Failed to signal records_accessed semaphore");
+                        exit(EXIT_FAILURE);
+                    }
+                    sem_close(records_accessed);
                 }
             }
             if (found == false)
@@ -340,15 +366,15 @@ int main(int argc, char *argv[])
     // Update the readers_encountered semaphore created by the coordinator
     sem_t *sem_readers_encountered = sem_open("/readers_encountered", 0);
     if (sem_readers_encountered == SEM_FAILED)
-  {
-    perror("sem_open");
-    exit(EXIT_FAILURE);
-  }
-  if (sem_post(sem_readers_encountered) == -1)
-  {
-    perror("Failed to signal writers_encountered semaphore");
-    exit(EXIT_FAILURE);
-  }
+    {
+        perror("sem_open");
+        exit(EXIT_FAILURE);
+    }
+    if (sem_post(sem_readers_encountered) == -1)
+    {
+        perror("Failed to signal writers_encountered semaphore");
+        exit(EXIT_FAILURE);
+    }
     sem_close(sem_readers_encountered);
 
     // Get the end time
