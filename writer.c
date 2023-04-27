@@ -383,7 +383,7 @@ int main(int argc, char *argv[])
       }
       sleep(time_arg);
 
-      // done reading
+      // done writing
       if (sem_post(sem_writer) == -1)
       {
         perror("Failed to signal read semaphore");
