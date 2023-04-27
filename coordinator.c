@@ -89,12 +89,6 @@ void remove_semaphore(const char *name, sem_t *sem)
 int main(int argc, char *argv[])
 {
 
-    // sem_unlink("/records_accessed");
-    // sem_unlink("/records_modified");
-    // sem_unlink("/readers_encountered");
-    // sem_unlink("/writers_encountered");
-    // exit(0);
-
     // studentRecord *shared_array = NULL;
     signal(SIGINT, cleanup_handler); // register the cleanup handler
 
@@ -156,6 +150,15 @@ int main(int argc, char *argv[])
         perror("Failed to attach shared memory");
         exit(EXIT_FAILURE);
     }
+    // create a text file for logging
+    FILE *fp;
+    fp = fopen("log.txt", "w");
+    if (fp == NULL)
+    {
+        printf("Error opening file!\n");
+        exit(1);
+    }
+    fprintf(fp, "Coordinator started.\n");
 
     // open BIN file that contains records
     FILE *fpb;
@@ -185,13 +188,6 @@ int main(int argc, char *argv[])
     {
         fread(&rec, sizeof(rec), 1, fpb);
         shared_array[i] = rec.studentID; // now just storing the studentID, but we probably don't need this
-        // memcpy(&shared_array[i], &rec, sizeof(rec));
-        // printf("%ld %-20s %-20s ",
-        //        rec.studentID, rec.lastName, rec.firstName);
-        // for (j = 0; j < NUM_COURSES; j++)
-        //     printf("%4.2f ", rec.grades[j]);
-        // printf("%4.2f\n", rec.GPA);
-        // printf("studentID: %ld\n", shared_array[i]);
     }
 
     fclose(fpb);
@@ -277,5 +273,6 @@ int main(int argc, char *argv[])
     // destroy the shared memory
     shmctl(reader_time_shmid, IPC_RMID, NULL);
     shmctl(writer_time_shmid, IPC_RMID, NULL);
+    fclose(fp);
     exit(0);
 }
