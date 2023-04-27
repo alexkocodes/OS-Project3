@@ -194,10 +194,6 @@ int main(int argc, char *argv[])
         to_be_destroyed = sem_read;
         name_to_be_destroyed = name;
 
-        int val = 0;
-        sem_getvalue(sem_read, &val);
-        printf("Semaphore value: %d\n", val);
-
         if (sem_read == SEM_FAILED)
         {
             if (errno == EEXIST)
@@ -251,14 +247,13 @@ int main(int argc, char *argv[])
 
                 // destroy the semaphores only when the last reader is done
                 sem_close(sem_read);
-                sem_unlink(name);
-                // int val = 0;
-                // sem_getvalue(sem_read, &val);
-                // if (val == MAX_READERS)
-                // {
-                //     sem_unlink(name);
-                //     break;
-                // }
+                int val = 0;
+                sem_getvalue(sem_read, &val);
+                printf("semaphore val: %d\n", val);
+                if (val == MAX_READERS)
+                {
+                    sem_unlink(name);
+                }
                 break;
             }
             else
@@ -309,14 +304,13 @@ int main(int argc, char *argv[])
             }
             // destroy the semaphores only when the last reader is done
             sem_close(sem_read);
-            sem_unlink(name);
-            // int val = 0;
-            // sem_getvalue(sem_read, &val);
-            // if (val == MAX_READERS)
-            // {
-            //     sem_unlink(name);
-            //     break;
-            // }
+            int val = 0;
+            sem_getvalue(sem_read, &val);
+            printf("semaphore val: %d\n", val);
+            if (val == MAX_READERS)
+            {
+                sem_unlink(name);
+            }
             break;
         }
     };
