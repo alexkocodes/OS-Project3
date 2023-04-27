@@ -472,6 +472,6 @@ int main(int argc, char *argv[])
             printf("detaching from total_reader_time shared memory segment successful\n");
         }
     }
-    close(fptxt);
+    fclose(fptxt);
     exit(0);
 }
