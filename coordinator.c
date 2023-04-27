@@ -21,11 +21,35 @@
 #define BIN_DATA_FILE "Dataset-500.bin"
 
 long *shared_array = NULL;
+double *total_reader_time = NULL;
+double *total_writer_time = NULL;
 void cleanup_handler(int sig)
 {
 
     // Detach from the shared memory segment
     if (shmdt(shared_array) == -1)
+    {
+        printf("detaching from shared memory segment failed");
+        perror("shmdt");
+        exit(1);
+    }
+    else
+    {
+        printf("detaching from shared memory segment successful\n");
+    }
+    // Detach from the shared memory segment for total_reader_time
+    if (shmdt(total_reader_time) == -1)
+    {
+        printf("detaching from shared memory segment failed");
+        perror("shmdt");
+        exit(1);
+    }
+    else
+    {
+        printf("detaching from shared memory segment successful\n");
+    }
+    // Detach from the shared memory segment for total_writer_time
+    if (shmdt(total_writer_time) == -1)
     {
         printf("detaching from shared memory segment failed");
         perror("shmdt");
@@ -78,6 +102,45 @@ int main(int argc, char *argv[])
     // Attach shared memory segment
     shared_array = shmat(shmid, NULL, 0);
     if (shared_array == (void *)(-1))
+    {
+        perror("Failed to attach shared memory");
+        exit(EXIT_FAILURE);
+    }
+
+    // Also include two variables in the shared memory segment:
+    // 1. readers_encountered: the number of readers that the program has encountered
+    // 2. writers_encountered: the number of writers that the program has encountered
+
+    sem_t *readers_encountered;
+    sem_t *writers_encountered;
+    create_semaphore("/readers_encountered", &readers_encountered, 0);
+    create_semaphore("/writers_encountered", &writers_encountered, 0);
+
+    key_t reader_time_key = 200;
+    int reader_time_shmid = shmget(reader_time_key, sizeof(double), 0666 | IPC_CREAT);
+    if (reader_time_shmid == -1)
+    {
+        perror("Failed to create shared memory segment");
+        exit(1);
+    }
+    total_reader_time = shmat(reader_time_shmid, NULL, 0);
+    // Attach shared memory segment
+    if (total_reader_time == (void *)(-1))
+    {
+        perror("Failed to attach shared memory");
+        exit(EXIT_FAILURE);
+    }
+
+    key_t writer_time_key = 300;
+    int writer_time_shmid = shmget(writer_time_key, sizeof(double), 0666 | IPC_CREAT);
+    if (writer_time_shmid == -1)
+    {
+        perror("Failed to create shared memory segment");
+        exit(1);
+    }
+    total_writer_time = shmat(writer_time_shmid, NULL, 0);
+    // Attach shared memory segment
+    if (total_writer_time == (void *)(-1))
     {
         perror("Failed to attach shared memory");
         exit(EXIT_FAILURE);
@@ -145,7 +208,51 @@ int main(int argc, char *argv[])
     {
         printf("detaching from shared memory segment successful\n");
     }
+    printf("FUCK\n");
     // destroy the shared memory
     shmctl(shmid, IPC_RMID, NULL);
+    // Print out the number of readers and writers encountered
+    int readers, writers;
+    printf("FUCK\n");
+    sem_getvalue(readers_encountered, &readers);
+    sem_getvalue(writers_encountered, &writers);
+    printf("Number of readers encountered: %d\n", readers);
+    printf("Number of writers encountered: %d\n", writers);
+    // remove the semaphores
+    sem_close(readers_encountered);
+    sem_close(writers_encountered);
+    sem_unlink("/readers_encountered");
+    sem_unlink("/writers_encountered");
+
+    // Print the average time taken by readers and writers
+    printf("Average time taken by readers: %.2f\n", *total_reader_time / readers);
+    printf("Average time taken by writers: %.2f\n", *total_writer_time / writers);
+
+    // Detach from the shared memory segment
+    if (shmdt(total_reader_time) == -1)
+    {
+        printf("detaching from shared memory segment failed\n");
+        perror("shmdt");
+        exit(1);
+    }
+    else
+    {
+        printf("detaching from shared memory segment for reader time successful\n");
+    }
+    // Detach from the shared memory segment
+    if (shmdt(total_writer_time) == -1)
+    {
+        printf("detaching from shared memory segment failed\n");
+        perror("shmdt");
+        exit(1);
+    }
+    else
+    {
+        printf("detaching from shared memory segment for writer time successful\n");
+    }
+
+    // destroy the shared memory
+    shmctl(reader_time_shmid, IPC_RMID, NULL);
+    shmctl(writer_time_shmid, IPC_RMID, NULL);
     exit(0);
 }

@@ -162,7 +162,7 @@ int main(int argc, char *argv[])
 
   char *filename;
   long recid = 0;
-  int time;
+  int time_arg;
   char *shmid_input;
 
   int i = 0;
@@ -181,8 +181,8 @@ int main(int argc, char *argv[])
     }
     if (strcmp(argv[i], "-d") == 0)
     {
-      time = atoi(argv[i + 1]);
-      // printf("%d", time);
+      time_arg = atoi(argv[i + 1]);
+      // printf("%d", time_arg);
     }
     if (strcmp(argv[i], "-s") == 0)
     {
@@ -211,6 +211,9 @@ int main(int argc, char *argv[])
     perror("Failed to attach shared memory");
     exit(EXIT_FAILURE);
   }
+
+  // Get starting time of writer process
+  time_t startTime = time(NULL);
 
   // Open binary data file for reading and writing
   fp = fopen(filename, "rb+");
@@ -297,7 +300,7 @@ int main(int argc, char *argv[])
         {
           printf("student record not found\n");
         }
-        sleep(time);
+        sleep(time_arg);
         // done writing
         if (sem_post(sem_writer) == -1)
         {
@@ -360,7 +363,7 @@ int main(int argc, char *argv[])
         printf("student record not found\n");
         // printf("recid: %ld\n", recid);
       }
-      sleep(time);
+      sleep(time_arg);
 
       // done reading
       if (sem_post(sem_writer) == -1)
@@ -393,6 +396,62 @@ int main(int argc, char *argv[])
   else
   {
     printf("detaching from shared memory segment successful\n");
+  }
+
+  // Update the writers_encountered semaphore created by the coordinator
+  sem_t *sem_writers_encountered = sem_open("/writers_encountered", 0);
+  if (sem_writers_encountered == SEM_FAILED)
+  {
+    perror("sem_open");
+    exit(EXIT_FAILURE);
+  }
+  if (sem_post(sem_writers_encountered) == -1)
+  {
+    perror("Failed to signal writers_encountered semaphore");
+    exit(EXIT_FAILURE);
+  }
+  sem_close(sem_writers_encountered);
+
+  // Get the end time
+  time_t endTime = time(NULL);
+  // Get time elapsed in seconds
+  double time_elapsed = difftime(endTime, startTime);
+
+  // Access the total_writer_time from its shared memory segment (key 300)
+  int shmid_total_writer_time = shmget(300, sizeof(double), 0666);
+  if (shmid_total_writer_time == -1)
+  {
+    printf("accessing total_writer_time shared memory segment failed\n");
+    perror("shmget");
+    exit(1);
+  }
+  else
+  {
+    // Update the total_writer_time
+    double *total_writer_time = (double *)shmat(shmid_total_writer_time, NULL, 0);
+    if (total_writer_time == (double *)-1)
+    {
+      printf("attaching to total_writer_time shared memory segment failed\n");
+      perror("shmat");
+      exit(1);
+    }
+    else
+    {
+      *total_writer_time += time_elapsed;
+      printf("total_writer_time: %f\n", *total_writer_time);
+    }
+
+    // Detach from the shared memory segment
+    if (shmdt(total_writer_time) == -1)
+    {
+      printf("detaching from total_writer_time shared memory segment failed\n");
+      perror("shmdt");
+      exit(1);
+    }
+    else
+    {
+      printf("detaching from total_writer_time shared memory segment successful\n");
+    }
   }
 
   exit(0);
