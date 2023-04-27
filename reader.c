@@ -194,9 +194,9 @@ int main(int argc, char *argv[])
         to_be_destroyed = sem_read;
         name_to_be_destroyed = name;
 
-        // int val = 0;
-        // sem_getvalue(sem_read, &val);
-        // printf("Semaphore value: %d\n", val);
+        int val = 0;
+        sem_getvalue(sem_read, &val);
+        printf("Semaphore value: %d\n", val);
 
         if (sem_read == SEM_FAILED)
         {
