@@ -379,11 +379,10 @@ int main(int argc, char *argv[])
       if (found == false)
       {
         printf("student record not found\n");
-        // printf("recid: %ld\n", recid);
       }
       sleep(time_arg);
 
-      // done reading
+      // done writing
       if (sem_post(sem_writer) == -1)
       {
         perror("Failed to signal read semaphore");

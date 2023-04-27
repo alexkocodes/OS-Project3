@@ -210,13 +210,15 @@ int main(int argc, char *argv[])
                     perror("sem_open");
                     exit(EXIT_FAILURE);
                 }
-                // start reading
+                // start waiting
+                printf("Waiting on semaphore\n");
                 if (sem_wait(sem_read) == -1)
                 {
                     perror("Failed to wait on read semaphore");
                     exit(EXIT_FAILURE);
                 }
-
+                printf("Semaphore acquired. Now starts reading.\n");
+                sleep(time_arg);
                 // loop througn the shared memory to find matching student id
                 int i = 0;
                 bool found = false;
@@ -253,7 +255,7 @@ int main(int argc, char *argv[])
                     printf("student record not found\n");
                     // printf("recid: %ld\n", recid);
                 }
-                sleep(time_arg);
+
                 // done reading
                 if (sem_post(sem_read) == -1)
                 {
@@ -286,12 +288,16 @@ int main(int argc, char *argv[])
         {
             // Semaphore did not exist, but we just created it. So we can start reading now.
             printf("semaphore created\n");
-            // start reading
+
+            // start waiting
+            printf("Waiting on semaphore\n");
             if (sem_wait(sem_read) == -1)
             {
                 perror("Failed to wait on read semaphore");
                 exit(EXIT_FAILURE);
             }
+            printf("Semaphore acquired. Now starts reading.\n");
+            sleep(time_arg);
 
             // loop througn the shared memory to find matching student id
             int i = 0;
@@ -327,7 +333,6 @@ int main(int argc, char *argv[])
                 printf("student record not found\n");
                 // printf("recid: %ld\n", recid);
             }
-            sleep(time_arg);
 
             // done reading
             if (sem_post(sem_read) == -1)
