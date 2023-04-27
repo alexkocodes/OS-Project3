@@ -138,15 +138,11 @@ int main(int argc, char *argv[])
             // printf("%s", shmid_input);
         }
     }
-    // cast shimid to int
-    int shmid = atoi(shmid_input);
-    key_t key;
-
-    // The segment with key 9999 that was created by the writer process
-    key = 100;
+    // Cast shmid_input to int
+    key_t key = atoi(shmid_input);
 
     // Locate the shared memory segment
-    shmid = shmget(key, SHM_SIZE, 0666);
+    int shmid = shmget(key, SHM_SIZE, 0666);
     // check for faiure (no segment found with that key)
     if (shmid < 0)
     {

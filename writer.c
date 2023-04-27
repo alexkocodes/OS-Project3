@@ -20,7 +20,6 @@
 #include "Hashmap.h"
 
 #define SHM_SIZE 1024
-#define BIN_DATA_FILE "Dataset-copy.bin"
 #define MAX_WRITER 1
 FILE *fp; // file pointer
 
@@ -306,13 +305,10 @@ int main(int argc, char *argv[])
     }
   }
   // Cast shmid_input to int
-  int shmid = atoi(shmid_input);
-  key_t key;
-
-  key = 100;
+  key_t key = atoi(shmid_input);
 
   // Locate the shared memory segment
-  shmid = shmget(key, SHM_SIZE, 0666);
+  int shmid = shmget(key, SHM_SIZE, 0666);
   // check for faiure (no segment found with that key)
   if (shmid < 0)
   {
