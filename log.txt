@@ -1,16 +1,20 @@
-Coordinator started.
-023: reader 28042 enters the session.
-Fri Apr 28 14:20:26 2023: reader 28042 is waiting on semaphore /r_0.
-Fri Apr 28 14:20:26 2023: reader 28042 has acquired semaphore /r_0.
-Fri Apr 28 14:20:26 2023: reader 28042 has now begun its work.
-Fri Apr 28 14:20:28 2023: reader 28049 enters the session.
-Fri Apr 28 14:20:28 2023: reader 28049 is waiting on semaphore /r_0.
-Fri Apr 28 14:20:28 2023: reader 28049 has acquired semaphore /r_0.
-Fri Apr 28 14:20:28 2023: reader 28049 has now begun its work.
-Fri Apr 28 14:20:31 2023: reader 28068 enters the session.
-Fri Apr 28 14:20:31 2023: reader 28068 is waiting on semaphore /r_0.
-Fri Apr 28 14:20:36 2023: reader 28042 has now finished its work.
-Fri Apr 28 14:20:36 2023: reader 28068 has acquired semaphore /r_0.
-Fri Apr 28 14:20:36 2023: reader 28068 has now begun its work.
-Fri Apr 28 14:20:38 2023: reader 28049 has now finished its work.
-Fri Apr 28 14:20:46 2023: reader 28068 has now finished its work.
+Fri Apr 28 18:07:01 2023: reader 59331 enters the session.
+Fri Apr 28 18:07:01 2023: reader 59331 is waiting on semaphore /r_101344.
+Fri Apr 28 18:07:01 2023: reader 59331 has acquired semaphore /r_101344.
+Fri Apr 28 18:07:01 2023: reader 59331 has now begun its work.
+Fri Apr 28 18:07:02 2023: reader 59341 enters the session.
+Fri Apr 28 18:07:02 2023: reader 59341 is waiting on semaphore /r_101344.
+Fri Apr 28 18:07:02 2023: reader 59341 has acquired semaphore /r_101344.
+Fri Apr 28 18:07:02 2023: reader 59341 has now begun its work.
+Fri Apr 28 18:07:04 2023: reader 59357 enters the session.
+Fri Apr 28 18:07:04 2023: reader 59358 enters the session.
+Fri Apr 28 18:07:04 2023: reader 59357 is waiting on semaphore /r_100007.
+Fri Apr 28 18:07:04 2023: reader 59358 is waiting on semaphore /r_101344.
+Fri Apr 28 18:07:04 2023: reader 59357 has acquired semaphore /r_100007.
+Fri Apr 28 18:07:04 2023: reader 59357 has now begun its work.
+Fri Apr 28 18:07:11 2023: reader 59331 has now finished its work.
+Fri Apr 28 18:07:11 2023: reader 59358 has acquired semaphore /r_101344.
+Fri Apr 28 18:07:11 2023: reader 59358 has now begun its work.
+Fri Apr 28 18:07:12 2023: reader 59341 has now finished its work.
+Fri Apr 28 18:07:14 2023: reader 59357 has now finished its work.
+Fri Apr 28 18:07:21 2023: reader 59358 has now finished its work.
