@@ -1,6 +1,16 @@
 Coordinator started.
-023: writer 3550 enters the session.
-Fri Apr 28 13:44:52 2023: writer 3550 is waiting on semaphore /w_1002.
-Fri Apr 28 13:44:52 2023: writer 3550 has acquired semaphore /w_1002.
-Fri Apr 28 13:44:52 2023: writer 3550 has now begun its work.
-Fri Apr 28 13:45:02 2023: writer 3550 has now finished its work.
+023: reader 28042 enters the session.
+Fri Apr 28 14:20:26 2023: reader 28042 is waiting on semaphore /r_0.
+Fri Apr 28 14:20:26 2023: reader 28042 has acquired semaphore /r_0.
+Fri Apr 28 14:20:26 2023: reader 28042 has now begun its work.
+Fri Apr 28 14:20:28 2023: reader 28049 enters the session.
+Fri Apr 28 14:20:28 2023: reader 28049 is waiting on semaphore /r_0.
+Fri Apr 28 14:20:28 2023: reader 28049 has acquired semaphore /r_0.
+Fri Apr 28 14:20:28 2023: reader 28049 has now begun its work.
+Fri Apr 28 14:20:31 2023: reader 28068 enters the session.
+Fri Apr 28 14:20:31 2023: reader 28068 is waiting on semaphore /r_0.
+Fri Apr 28 14:20:36 2023: reader 28042 has now finished its work.
+Fri Apr 28 14:20:36 2023: reader 28068 has acquired semaphore /r_0.
+Fri Apr 28 14:20:36 2023: reader 28068 has now begun its work.
+Fri Apr 28 14:20:38 2023: reader 28049 has now finished its work.
+Fri Apr 28 14:20:46 2023: reader 28068 has now finished its work.
