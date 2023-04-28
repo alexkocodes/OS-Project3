@@ -15,7 +15,7 @@
 #include <sys/shm.h>
 #include <semaphore.h>
 #include <fcntl.h>
-#include "Hashmap.h"
+#include "common.h"
 
 #define SHM_SIZE 1024
 #define BIN_DATA_FILE "Dataset-500.bin"
@@ -104,8 +104,27 @@ int main(int argc, char *argv[])
     // studentRecord *shared_array = NULL;
     signal(SIGINT, cleanup_handler); // register the cleanup handler
 
-    // coordinator creates shared memory segment to store shared data
-    key_t key = 100;
+    // Get command line args for binary data filename and shmid key for shmget
+    char *filename;
+    char *shmid_input;
+
+    int argCheck = 0;
+    for (argCheck = 0; argCheck < argc; argCheck++)
+    {
+        if (strcmp(argv[argCheck], "-f") == 0)
+        {
+            filename = argv[argCheck + 1];
+            // printf("%s", filename);
+        }
+        if (strcmp(argv[argCheck], "-s") == 0)
+        {
+            shmid_input = argv[argCheck + 1];
+            // printf("%s", shmid_input);
+        }
+    }
+
+    // Cast shmid_input to int to be used as key
+    key_t key = atoi(shmid_input);
     int shmid = shmget(key, SHM_SIZE, 0666 | IPC_CREAT);
     if (shmid == -1)
     {
@@ -120,9 +139,11 @@ int main(int argc, char *argv[])
         exit(EXIT_FAILURE);
     }
 
-    // Also include two variables in the shared memory segment:
+    // Make four semaphores to get statistics related to program execution:
     // 1. readers_encountered: the number of readers that the program has encountered
     // 2. writers_encountered: the number of writers that the program has encountered
+    // 3. records_accessed: the number of record accesses
+    // 4. records_modified: the number of record modifications 
 
     sem_t *readers_encountered;
     sem_t *writers_encountered;
@@ -133,6 +154,8 @@ int main(int argc, char *argv[])
     create_semaphore("/records_accessed", &records_accessed, 0);
     create_semaphore("/records_modified", &records_modified, 0);
 
+    // Create a shared memory segment with key 200 to share time taken by readers
+    // Used to calculate average reader duration
     key_t reader_time_key = 200;
     int reader_time_shmid = shmget(reader_time_key, sizeof(double), 0666 | IPC_CREAT);
     if (reader_time_shmid == -1)
@@ -148,6 +171,8 @@ int main(int argc, char *argv[])
         exit(EXIT_FAILURE);
     }
 
+    // Create a shared memory segment with key 300 to share time taken by writers
+    // Used to calculate average writer duration
     key_t writer_time_key = 300;
     int writer_time_shmid = shmget(writer_time_key, sizeof(double), 0666 | IPC_CREAT);
     if (writer_time_shmid == -1)
@@ -163,6 +188,8 @@ int main(int argc, char *argv[])
         exit(EXIT_FAILURE);
     }
 
+    // Create a shared memory segment with key 400 to share waiting time of processes
+    // Used to calculate maximum waiting time for a process
     key_t max_waiting_time_key = 400;
     int max_waiting_time_shmid = shmget(max_waiting_time_key, sizeof(double), 0666 | IPC_CREAT);
     if (max_waiting_time_shmid == -1)
@@ -194,14 +221,14 @@ int main(int argc, char *argv[])
     int numOfrecords;
     int i;
     studentRecord rec;
-    fpb = fopen(BIN_DATA_FILE, "rb");
+    fpb = fopen(filename, "rb");
     if (fpb == NULL)
     {
         printf("Cannot open binary file\n");
         return (1); // exit if not successful file opening
     }
 
-    // check number of records stats in BIN file
+    // check number of records in BIN file
     fseek(fpb, 0, SEEK_END);
     lSize = ftell(fpb);
     rewind(fpb);
@@ -211,7 +238,8 @@ int main(int argc, char *argv[])
     printf("Records found in file %d \n", numOfrecords);
     sleep(1);
 
-    // Read the records from the BIN file and store them in the shared memory
+    // Read the studentIDs from the BIN file and store them in the shared memory
+    // Why we only read the studentIDs is explained in the write-up
     for (i = 0; i < numOfrecords; i++)
     {
         fread(&rec, sizeof(rec), 1, fpb);
@@ -224,6 +252,8 @@ int main(int argc, char *argv[])
     while (1)
     {
         // take user input and if the user types exit, then we break the while loop
+        // NOTE: Please avoid using ctrl-C to end execution as it may cause issues
+        // with the puring of shared memory segments and semaphores
         char input[100];
         printf("Enter a command: ");
         fgets(input, 100, stdin);
@@ -232,7 +262,7 @@ int main(int argc, char *argv[])
             break;
         }
     };
-    // Detach from the shared memory segment
+    // Detach from the shared memory segment for shared_array of studentIDs
     if (shmdt(shared_array) == -1)
     {
         printf("detaching from shared memory segment failed\n");
@@ -279,6 +309,7 @@ int main(int argc, char *argv[])
     sem_getvalue(records_modified, &modified);
     printf("Number of records accessed: %d\n", accessed);
     printf("Number of records modified: %d\n", modified);
+    printf("Sum: %d\n", accessed + modified);
 
     // destory the semaphores for records
     sem_close(records_accessed);
@@ -286,7 +317,7 @@ int main(int argc, char *argv[])
     sem_unlink("/records_accessed");
     sem_unlink("/records_modified");
 
-    // Detach from the shared memory segment
+    // Detach from the shared memory segment for reader-time measures
     if (shmdt(total_reader_time) == -1)
     {
         printf("detaching from shared memory segment failed\n");
@@ -297,7 +328,7 @@ int main(int argc, char *argv[])
     {
         printf("detaching from shared memory segment for reader time successful\n");
     }
-    // Detach from the shared memory segment
+    // Detach from the shared memory segment writer-time measures
     if (shmdt(total_writer_time) == -1)
     {
         printf("detaching from shared memory segment failed\n");
@@ -308,7 +339,7 @@ int main(int argc, char *argv[])
     {
         printf("detaching from shared memory segment for writer time successful\n");
     }
-    // Detach from the shared memory segment
+    // Detach from the shared memory segment for waiting time measures
     if (shmdt(max_waiting_time) == -1)
     {
         printf("detaching from shared memory segment failed\n");
@@ -320,7 +351,7 @@ int main(int argc, char *argv[])
         printf("detaching from shared memory segment for max waiting time successful\n");
     }
 
-    // destroy the shared memory
+    // destroy the shared memory segments
     shmctl(reader_time_shmid, IPC_RMID, NULL);
     shmctl(writer_time_shmid, IPC_RMID, NULL);
     shmctl(max_waiting_time_shmid, IPC_RMID, NULL);
