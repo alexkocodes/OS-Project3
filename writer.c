@@ -380,6 +380,37 @@ int main(int argc, char *argv[])
       continue;
     }
 
+    time_t waiting_done = time(NULL); // Time at which writer finished waiting
+    double waiting_time = difftime(waiting_done, startTime);
+    // Open shared memory segment for max_waiting_time (key = 400)
+    int shmid_max_waiting_time = shmget(400, sizeof(double), 0666);
+    // check for faiure (no segment found with that key)
+    if (shmid_max_waiting_time < 0)
+    {
+      perror("shmget failure");
+      exit(1);
+    } else { // Attach shared memory segment
+        double *max_waiting_time = (double *)shmat(shmid_max_waiting_time, NULL, 0);
+        if (max_waiting_time == (void *)-1)
+        {
+            perror("Failed to attach shared memory");
+            exit(EXIT_FAILURE);
+        } else {
+            // Update max_waiting_time if necessary
+            if (waiting_time > *max_waiting_time) {
+                *max_waiting_time = waiting_time;
+            }
+        }
+        // Detach shared memory segment
+        if (shmdt(max_waiting_time) == -1)
+        {
+            perror("Failed to detach shared memory");
+            exit(EXIT_FAILURE);
+        }
+    }
+
+    time_t startTimePostWait = time(NULL);
+
     printf("%s status: ", name);
     sem_t *sem_writer = sem_open(name, O_CREAT | O_EXCL, 0666, MAX_WRITER);
 
@@ -421,7 +452,7 @@ int main(int argc, char *argv[])
 
           if (shared_array[i] == recid)
           {
-            if (editRecord(recid, i, shared_array, startTime, time_arg) == 0)
+            if (editRecord(recid, i, shared_array, startTimePostWait, time_arg) == 0)
             {
               printf("Record updated successfully\n");
               // update the records_modified semaphore by 1
@@ -438,7 +469,7 @@ int main(int argc, char *argv[])
               }
               sem_close(records_modified);
             }
-            else if (editRecord(recid, i, shared_array, startTime, time_arg) == -1)
+            else if (editRecord(recid, i, shared_array, startTimePostWait, time_arg) == -1)
             {
               printf("Record not found\n");
             }
@@ -451,7 +482,7 @@ int main(int argc, char *argv[])
           }
         }
         // Get time left (time_arg - (current time - start time)))
-        int timeLeft = time_arg - (time(NULL) - startTime);
+        int timeLeft = time_arg - (time(NULL) - startTimePostWait);
         // sleep for the remaining time
         sleep(timeLeft);
       // done writing
@@ -502,7 +533,7 @@ int main(int argc, char *argv[])
       {
         if (shared_array[i] == recid)
         {
-          if (editRecord(recid, i, shared_array, startTime, time_arg) == 0)
+          if (editRecord(recid, i, shared_array, startTimePostWait, time_arg) == 0)
           {
             printf("Record edited successfully\n");
             // update the records_modified semaphore by 1
@@ -519,7 +550,7 @@ int main(int argc, char *argv[])
             }
             sem_close(records_modified);
           }
-          else if (editRecord(recid, i, shared_array, startTime, time_arg) == -1)
+          else if (editRecord(recid, i, shared_array, startTimePostWait, time_arg) == -1)
           {
             printf("Record not found\n");
           }
@@ -532,7 +563,7 @@ int main(int argc, char *argv[])
         }
       }
       // Get time left (time_arg - (current time - start time)))
-      int timeLeft = time_arg - (time(NULL) - startTime);
+      int timeLeft = time_arg - (time(NULL) - startTimePostWait);
       // sleep for the remaining time
       sleep(timeLeft);
 
@@ -605,7 +636,7 @@ int main(int argc, char *argv[])
     else
     {
       *total_writer_time += time_elapsed;
-      printf("total_writer_time: %f\n", *total_writer_time);
+      printf("This writer process took %f seconds\n", time_elapsed);
     }
 
     // Detach from the shared memory segment
