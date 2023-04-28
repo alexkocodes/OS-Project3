@@ -94,6 +94,18 @@ bool checkWriteSem(char *name)
     return false;
 }
 
+bool contains(long *arr, int size, long target)
+{
+    for (int i = 0; i < size; i++)
+    {
+        if (arr[i] == target)
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
 char *getTime()
 {
     // get current time in seconds since epoch
@@ -109,6 +121,7 @@ int main(int argc, char *argv[])
     signal(SIGINT, cleanup_handler); // register the cleanup handler
 
     char *filename;
+    char *recid_list_input = NULL;
     long recid = 0;
     int time_arg;
     char *shmid_input;
@@ -123,9 +136,7 @@ int main(int argc, char *argv[])
         }
         if (strcmp(argv[i], "-l") == 0)
         {
-            char *ptr;
-            recid = strtol(argv[i + 1], &ptr, 10);
-            // printf("%ld", recid);
+            recid_list_input = argv[i + 1];
         }
         if (strcmp(argv[i], "-d") == 0)
         {
@@ -190,6 +201,18 @@ int main(int argc, char *argv[])
     fprintf(fptxt, "%s: reader %d enters the session.\n", timestamp, pid);
     fflush(fptxt);
     bool firstPrint = true;
+
+    long recid_list[10];
+    int recid_list_size = 0;
+    char *token = strtok(recid_list_input, ",");
+    while (token != NULL)
+    {
+        char *ptr;
+        recid_list[recid_list_size] = strtol(token, &ptr, 10);
+        token = strtok(NULL, ",");
+        recid_list_size++;
+    }
+
     while (1)
     {
 
@@ -302,7 +325,7 @@ int main(int argc, char *argv[])
                 for (i = 0; i < numOfrecords; i++)
                 {
 
-                    if (shared_array[i] == recid)
+                    if (contains(recid_list, recid_list_size, shared_array[i]))
                     {
                         printf("found student record: %ld\n", shared_array[i]);
                         studentRecord *temp_record = findRecord(recid, i, shared_array);
@@ -395,7 +418,7 @@ int main(int argc, char *argv[])
             bool found = false;
             for (i = 0; i < numOfrecords; i++)
             {
-                if (shared_array[i] == recid)
+                if (contains(recid_list, recid_list_size, shared_array[i]))
                 {
                     printf("found student record: %ld\n", shared_array[i]);
                     studentRecord *temp_record = findRecord(recid, i, shared_array);
