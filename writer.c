@@ -468,6 +468,7 @@ int main(int argc, char *argv[])
           {
             if (editRecord(recid, i, shared_array, startTimePostWait, time_arg) == 0)
             {
+              found = true;
               printf("Record updated successfully\n");
               // update the records_modified semaphore by 1
               sem_t *records_modified = sem_open("/records_modified", 0);
@@ -486,6 +487,7 @@ int main(int argc, char *argv[])
             else if (editRecord(recid, i, shared_array, startTimePostWait, time_arg) == -1)
             {
               printf("Record not found\n");
+              found = false;
             }
             else
             {
@@ -553,6 +555,7 @@ int main(int argc, char *argv[])
         {
           if (editRecord(recid, i, shared_array, startTimePostWait, time_arg) == 0)
           {
+            found = true;
             printf("Record edited successfully\n");
             // update the records_modified semaphore by 1
             sem_t *records_modified = sem_open("/records_modified", 0);
@@ -571,6 +574,7 @@ int main(int argc, char *argv[])
           else if (editRecord(recid, i, shared_array, startTimePostWait, time_arg) == -1)
           {
             printf("Record not found\n");
+            found = false;
           }
           else
           {
