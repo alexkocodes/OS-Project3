@@ -118,8 +118,6 @@ char *getTime()
 
 int main(int argc, char *argv[])
 {
-    signal(SIGINT, cleanup_handler); // register the cleanup handler
-
     char *filename;
     char *recid_list_input = NULL;
     long recid = 0;
@@ -170,6 +168,7 @@ int main(int argc, char *argv[])
         pid_t pid = fork();
         if (pid == 0)
         {
+            signal(SIGINT, cleanup_handler); // register the cleanup handler
             // Locate the shared memory segment
             int shmid = shmget(key, SHM_SIZE, 0666);
             // check for faiure (no segment found with that key)
@@ -351,7 +350,7 @@ int main(int argc, char *argv[])
                                 studentRecord *temp_record = findRecord(recid, i, shared_array);
                                 if (temp_record != NULL)
                                 {
-                                    printf("%ld %s %s\n", temp_record->studentID, temp_record->lastName, temp_record->firstName);
+                                    printf("%ld %s %s %f\n", temp_record->studentID, temp_record->lastName, temp_record->firstName, temp_record->GPA);
                                 }
 
                                 found = true;
@@ -445,7 +444,7 @@ int main(int argc, char *argv[])
                             studentRecord *temp_record = findRecord(recid, i, shared_array);
                             if (temp_record != NULL)
                             {
-                                printf("%ld %s %s\n", temp_record->studentID, temp_record->lastName, temp_record->firstName);
+                                printf("%ld %s %s %f\n", temp_record->studentID, temp_record->lastName, temp_record->firstName, temp_record->GPA);
                             }
                             found = true;
                             // update the records_accessed semaphore by 1

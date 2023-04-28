@@ -183,7 +183,7 @@ int editRecord(long studentID, int index, const long *idArray, const double star
   else
   {
     printf("Record found: ");
-    printf("%ld %s %s\n", recordToEdit->studentID, recordToEdit->firstName, recordToEdit->lastName);
+    printf("%ld %s %s %f\n", recordToEdit->studentID, recordToEdit->firstName, recordToEdit->lastName, recordToEdit->GPA);
   }
 
   // Place all the GPA values into an array
