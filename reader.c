@@ -212,6 +212,35 @@ int main(int argc, char *argv[])
             continue;
         }
 
+        time_t waiting_done = time(NULL); // Time at which reader finished waiting
+        double waiting_time = difftime(waiting_done, startTime);
+        // Open shared memory segment for max_waiting_time (key = 400)
+        int shmid_max_waiting_time = shmget(400, sizeof(double), 0666);
+        // check for faiure (no segment found with that key)
+        if (shmid_max_waiting_time < 0)
+        {
+            perror("shmget failure");
+            exit(1);
+        } else { // Attach shared memory segment
+            double *max_waiting_time = (double *)shmat(shmid_max_waiting_time, NULL, 0);
+            if (max_waiting_time == (void *)-1)
+            {
+                perror("Failed to attach shared memory");
+                exit(EXIT_FAILURE);
+            } else {
+                // Update max_waiting_time if necessary
+                if (waiting_time > *max_waiting_time) {
+                    *max_waiting_time = waiting_time;
+                }
+            }
+            // Detach shared memory segment
+            if (shmdt(max_waiting_time) == -1)
+            {
+                perror("Failed to detach shared memory");
+                exit(EXIT_FAILURE);
+            }
+        }
+
         printf("%s status: ", name);
         sem_t *sem_read = sem_open(name, O_CREAT | O_EXCL, 0666, MAX_READERS);
 
@@ -437,7 +466,7 @@ int main(int argc, char *argv[])
     time_t endTime = time(NULL);
     // Calculate the total time elapsed
     double time_taken = difftime(endTime, startTime);
-    printf("time taken: %f\n", time_taken);
+    printf("This reader took %f seconds to execute.\n", time_taken);
 
     // access the total_reader_time from its shared memory segment and update it (key = 200)
     int shmid_total_reader_time = shmget(200, sizeof(double), 0666);

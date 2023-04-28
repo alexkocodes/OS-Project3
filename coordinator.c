@@ -23,6 +23,7 @@
 long *shared_array = NULL;
 double *total_reader_time = NULL;
 double *total_writer_time = NULL;
+double *max_waiting_time = NULL;
 void cleanup_handler(int sig)
 {
 
@@ -50,6 +51,17 @@ void cleanup_handler(int sig)
     }
     // Detach from the shared memory segment for total_writer_time
     if (shmdt(total_writer_time) == -1)
+    {
+        printf("detaching from shared memory segment failed");
+        perror("shmdt");
+        exit(1);
+    }
+    else
+    {
+        printf("detaching from shared memory segment successful\n");
+    }
+    // Detach from the shared memory segment for max_waiting_time
+    if (shmdt(max_waiting_time) == -1)
     {
         printf("detaching from shared memory segment failed");
         perror("shmdt");
@@ -150,6 +162,22 @@ int main(int argc, char *argv[])
         perror("Failed to attach shared memory");
         exit(EXIT_FAILURE);
     }
+
+    key_t max_waiting_time_key = 400;
+    int max_waiting_time_shmid = shmget(max_waiting_time_key, sizeof(double), 0666 | IPC_CREAT);
+    if (max_waiting_time_shmid == -1)
+    {
+        perror("Failed to create shared memory segment");
+        exit(1);
+    }
+    max_waiting_time = shmat(max_waiting_time_shmid, NULL, 0);
+    // Attach shared memory segment
+    if (max_waiting_time == (void *)(-1))
+    {
+        perror("Failed to attach shared memory");
+        exit(EXIT_FAILURE);
+    }
+
     // create a text file for logging
     FILE *fp;
     fp = fopen("log.txt", "w");
@@ -242,6 +270,9 @@ int main(int argc, char *argv[])
         printf("No writers encountered. Can't compute average duration\n");
     }
 
+    // Print the maximum waiting time for a process
+    printf("Maximum waiting time for a process: %.2f\n", *max_waiting_time);
+
     // Print the number of records accessed and modified
     int accessed, modified;
     sem_getvalue(records_accessed, &accessed);
@@ -277,10 +308,22 @@ int main(int argc, char *argv[])
     {
         printf("detaching from shared memory segment for writer time successful\n");
     }
+    // Detach from the shared memory segment
+    if (shmdt(max_waiting_time) == -1)
+    {
+        printf("detaching from shared memory segment failed\n");
+        perror("shmdt");
+        exit(1);
+    }
+    else
+    {
+        printf("detaching from shared memory segment for max waiting time successful\n");
+    }
 
     // destroy the shared memory
     shmctl(reader_time_shmid, IPC_RMID, NULL);
     shmctl(writer_time_shmid, IPC_RMID, NULL);
+    shmctl(max_waiting_time_shmid, IPC_RMID, NULL);
     fclose(fp);
     exit(0);
 }
