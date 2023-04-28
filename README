@@ -1,0 +1,15 @@
+Kindly use "make clean" and "make" to generate new output files before testing the program
+
+The command line arguments for our programs are as follows:
+./coordinator -f filename -s shmid
+./reader -f filename -l record_id(s) -d time_allowed -s shmid
+./writer -f filename -l record_id -d time_allowed -s shmid
+
+Kindly feel free to test our application using the following commands:
+./coordinator -f Dataset-500.bin -s 100
+./reader -f Dataset-500.bin -l 101344 -d 10 -s 100
+./reader -f Dataset-500.bin -l 100007,101344 -d 10 -s 100
+./writer -f Dataset-500.bin -l 100007 -d 10 -s 100
+./reader -f Dataset-500.bin -l 100007 -d 10 -s 100
+
+This covers the creation of a coordinator, accessing multiple records and writing to a record. These commands can be run concurrently to test the application. From our testing, we've had the processes wait and execute in an appropriate manner to ensure that the application works as expected.
