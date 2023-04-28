@@ -1,16 +1,29 @@
 Coordinator started.
-023: reader 28042 enters the session.
-Fri Apr 28 14:20:26 2023: reader 28042 is waiting on semaphore /r_0.
-Fri Apr 28 14:20:26 2023: reader 28042 has acquired semaphore /r_0.
-Fri Apr 28 14:20:26 2023: reader 28042 has now begun its work.
-Fri Apr 28 14:20:28 2023: reader 28049 enters the session.
-Fri Apr 28 14:20:28 2023: reader 28049 is waiting on semaphore /r_0.
-Fri Apr 28 14:20:28 2023: reader 28049 has acquired semaphore /r_0.
-Fri Apr 28 14:20:28 2023: reader 28049 has now begun its work.
-Fri Apr 28 14:20:31 2023: reader 28068 enters the session.
-Fri Apr 28 14:20:31 2023: reader 28068 is waiting on semaphore /r_0.
-Fri Apr 28 14:20:36 2023: reader 28042 has now finished its work.
-Fri Apr 28 14:20:36 2023: reader 28068 has acquired semaphore /r_0.
-Fri Apr 28 14:20:36 2023: reader 28068 has now begun its work.
-Fri Apr 28 14:20:38 2023: reader 28049 has now finished its work.
-Fri Apr 28 14:20:46 2023: reader 28068 has now finished its work.
+023: reader 61503 enters the session.
+Fri Apr 28 18:16:48 2023: reader 61504 enters the session.
+Fri Apr 28 18:16:48 2023: reader 61503 is waiting on semaphore /r_100007.
+Fri Apr 28 18:16:48 2023: reader 61503 has acquired semaphore /r_100007.
+Fri Apr 28 18:16:48 2023: reader 61503 has now begun its work.
+Fri Apr 28 18:16:48 2023: reader 61504 is waiting on semaphore /r_101344.
+Fri Apr 28 18:16:48 2023: reader 61504 has acquired semaphore /r_101344.
+Fri Apr 28 18:16:48 2023: reader 61504 has now begun its work.
+Fri Apr 28 18:16:54 2023: reader 61536 enters the session.
+Fri Apr 28 18:16:54 2023: reader 61536 is waiting on semaphore /r_101344.
+Fri Apr 28 18:16:54 2023: reader 61536 has acquired semaphore /r_101344.
+Fri Apr 28 18:16:54 2023: reader 61536 has now begun its work.
+Fri Apr 28 18:17:03 2023: writer 61568 enters the session.
+Fri Apr 28 18:17:03 2023: writer 61568 is waiting on semaphore /w_100007.
+Fri Apr 28 18:17:03 2023: writer 61568 has acquired semaphore /w_100007.
+Fri Apr 28 18:17:03 2023: writer 61568 has now begun its work.
+Fri Apr 28 18:17:05 2023: reader 61578 enters the session.
+Fri Apr 28 18:17:05 2023: reader 61578 is waiting because there is a writer present.
+Fri Apr 28 18:17:05 2023: reader 61579 enters the session.
+Fri Apr 28 18:17:05 2023: reader 61579 is waiting on semaphore /r_101344.
+Fri Apr 28 18:17:05 2023: reader 61579 has acquired semaphore /r_101344.
+Fri Apr 28 18:17:05 2023: reader 61579 has now begun its work.
+Fri Apr 28 18:17:15 2023: reader 61579 has now finished its work.
+Fri Apr 28 18:17:18 2023: writer 61568 has now finished its work.
+Fri Apr 28 18:17:18 2023: reader 61578 is waiting on semaphore /r_100007.
+Fri Apr 28 18:17:18 2023: reader 61578 has acquired semaphore /r_100007.
+Fri Apr 28 18:17:18 2023: reader 61578 has now begun its work.
+Fri Apr 28 18:17:28 2023: reader 61578 has now finished its work.
