@@ -17,17 +17,21 @@
 #include <semaphore.h>
 #include <fcntl.h>
 #include <errno.h>
-#include "Hashmap.h"
+#include "common.h"
 
 #define SHM_SIZE 1024
-#define MAX_READERS 2 // max number of readers per record
+// max number of readers per record (to avoid too many semaphores and starvation)
+// Set to 2 based on testing convenience and instructor advice
+#define MAX_READERS 2
 #define BIN_DATA_FILE "Dataset-500.bin"
 
 FILE *fp; // file pointer
 
-long *shared_array = NULL;
-sem_t *to_be_destroyed = NULL;
+long *shared_array = NULL; // Array of studentIDs
+sem_t *to_be_destroyed = NULL; // For purging of shared memory
 char *name_to_be_destroyed = "/to_be_destroyed";
+// Function to clean up shared memory segments
+// We were having trouble with this so it may not be fully utilized
 void cleanup_handler(int sig)
 {
 
@@ -94,6 +98,7 @@ bool checkWriteSem(char *name)
     return false;
 }
 
+// Function to check if a target contains something
 bool contains(long *arr, int size, long target)
 {
     for (int i = 0; i < size; i++)
@@ -106,6 +111,7 @@ bool contains(long *arr, int size, long target)
     return false;
 }
 
+// Function to get current time for logging
 char *getTime()
 {
     // get current time in seconds since epoch
@@ -118,12 +124,14 @@ char *getTime()
 
 int main(int argc, char *argv[])
 {
+    // Declare variables for args (based on assignment requirements)
     char *filename;
     char *recid_list_input = NULL;
     long recid = 0;
     int time_arg;
     char *shmid_input;
 
+    // Get command-line args
     int i = 0;
     for (i = 0; i < argc; i++)
     {
@@ -150,6 +158,7 @@ int main(int argc, char *argv[])
     // Cast shmid_input to int
     key_t key = atoi(shmid_input);
 
+    // Get record IDs to be read(max. 10)
     long recid_list[10];
     int recid_list_size = 0;
     char *token = strtok(recid_list_input, ",");
@@ -221,7 +230,7 @@ int main(int argc, char *argv[])
             // child process
             while (1)
             {
-
+                // Create appropriate semaphore for record
                 char *beginning = "/r_";
                 char str_recid[20];
                 sprintf(str_recid, "%ld", recid);
@@ -250,6 +259,7 @@ int main(int argc, char *argv[])
                     continue;
                 }
 
+                // Get waiting time and check if it's the highest there has been for a process
                 time_t waiting_done = time(NULL); // Time at which reader finished waiting
                 double waiting_time = difftime(waiting_done, startTime);
                 // Open shared memory segment for max_waiting_time (key = 400)
@@ -284,12 +294,14 @@ int main(int argc, char *argv[])
                     }
                 }
 
+                // Logging and opening appropriate semaphore
                 printf("%s status: ", name);
                 sem_t *sem_read = sem_open(name, O_CREAT | O_EXCL, 0666, MAX_READERS);
 
                 to_be_destroyed = sem_read;
                 name_to_be_destroyed = name;
 
+                // Check if a semaphore exists already or not
                 if (sem_read == SEM_FAILED)
                 {
                     if (errno == EEXIST)
@@ -334,7 +346,12 @@ int main(int argc, char *argv[])
                         fprintf(fptxt, "%s: reader %d has now begun its work.\n", timestamp, pid);
                         fflush(fptxt);
 
-                        sleep(time_arg); // sleep for the specified time
+                        waiting_done = time(NULL); // Update time at which waiting stops
+
+                        // Time left for the reader = total time alloted - time elapsed
+                        // time elapsed is current_time - start_time after we're done waiting
+                        double timeLeft = time_arg - (time(NULL) - waiting_done);
+                        sleep(timeLeft); // sleep for the specified time
 
                         // loop througn the shared memory to find matching student id
                         int i = 0;
@@ -344,13 +361,23 @@ int main(int argc, char *argv[])
                         {
 
                             // if (contains(recid_list, recid_list_size, shared_array[i]))
-                            if (recid == shared_array[i])
+                            if (recid == shared_array[i]) // If we find a matching ID
                             {
+                                // Get studentRecord with the studentID received
+                                // and print the details
                                 printf("found student record: %ld\n", shared_array[i]);
                                 studentRecord *temp_record = findRecord(recid, i, shared_array);
                                 if (temp_record != NULL)
-                                {
-                                    printf("%ld %s %s %f\n", temp_record->studentID, temp_record->lastName, temp_record->firstName, temp_record->GPA);
+                                {   
+                                    printf("StudentID: %ld\n", temp_record->studentID);
+                                    printf("First Name: %s ", temp_record->firstName);
+                                    printf("Last Name: %s\n", temp_record->lastName);
+                                    printf("GPA: %f\n", temp_record->GPA);
+                                    for (int x = 0; x < NUM_COURSES; x++)
+                                    {
+                                        printf("Course %d: %f\n", x + 1, temp_record->grades[x]);
+                                    }
+                                    printf("--------------------\n");
                                 }
 
                                 found = true;
@@ -369,7 +396,7 @@ int main(int argc, char *argv[])
                                 sem_close(records_accessed);
                             }
                         }
-                        if (found == false)
+                        if (found == false) // If record not found, inform user
                         {
                             printf("student record not found\n");
                             // printf("recid: %ld\n", recid);
@@ -430,7 +457,10 @@ int main(int argc, char *argv[])
                     fprintf(fptxt, "%s: reader %d has now begun its work.\n", timestamp, pid);
                     fflush(fptxt);
 
-                    sleep(time_arg);
+                    // Time left for the reader = total time alloted - time elapsed
+                    // time elapsed is current_time - start_time after we're done waiting
+                    double timeLeft = time_arg - (time(NULL) - waiting_done);
+                    sleep(timeLeft);
 
                     // loop througn the shared memory to find matching student id
                     int i = 0;
@@ -438,13 +468,22 @@ int main(int argc, char *argv[])
                     for (i = 0; i < numOfrecords; i++)
                     {
                         // if (contains(recid_list, recid_list_size, shared_array[i]))
-                        if (recid == shared_array[i])
+                        if (recid == shared_array[i]) // If studentID found in array
                         {
+                            // Find matching studentRecord and print the studentID
                             printf("found student record: %ld\n", shared_array[i]);
                             studentRecord *temp_record = findRecord(recid, i, shared_array);
                             if (temp_record != NULL)
                             {
-                                printf("%ld %s %s %f\n", temp_record->studentID, temp_record->lastName, temp_record->firstName, temp_record->GPA);
+                                printf("StudentID: %ld\n", temp_record->studentID);
+                                printf("First Name: %s ", temp_record->firstName);
+                                printf("Last Name: %s\n", temp_record->lastName);
+                                printf("GPA: %f\n", temp_record->GPA);
+                                for (int x = 0; x < NUM_COURSES; x++)
+                                {
+                                    printf("Course %d: %f\n", x + 1, temp_record->grades[x]);
+                                }
+                                printf("--------------------\n");
                             }
                             found = true;
                             // update the records_accessed semaphore by 1
@@ -494,7 +533,7 @@ int main(int argc, char *argv[])
                     break;
                 }
             };
-            // Detach from the shared memory segment
+            // Detach from the shared memory segment for shared array of studentIDs
             if (shmdt(shared_array) == -1)
             {
                 printf("detaching from shared memory segment failed\n");

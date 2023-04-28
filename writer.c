@@ -17,13 +17,13 @@
 #include <semaphore.h>
 #include <fcntl.h>
 #include <errno.h>
-#include "Hashmap.h"
+#include "common.h"
 
 #define SHM_SIZE 1024
 #define MAX_WRITER 1
 FILE *fp; // file pointer
 
-long *shared_array = NULL;
+long *shared_array = NULL; // Shared array of studentIDs
 sem_t *to_be_destroyed = NULL;
 char *name_to_be_destroyed = "/to_be_destroyed";
 void cleanup_handler(int sig)
@@ -71,6 +71,7 @@ studentRecord *findRecord(long studentID, int index, const long *idArray)
   }
 }
 
+// Function to read an integer within a specified amount of time
 int read_int_within_timeout(int timeout_seconds, int *result)
 {
   char input[256];
@@ -119,6 +120,7 @@ int read_int_within_timeout(int timeout_seconds, int *result)
   return -1; // Timeout expired
 }
 
+// Function to read a float within a specified amount of time
 int read_float_within_timeout(int timeout_seconds, float *result)
 {
   char input[256];
@@ -213,7 +215,7 @@ int editRecord(long studentID, int index, const long *idArray, const double star
     printf("Timeout expired\n");
     return -2;
   }
-  // new grad has to be between 0 to 4
+  // new grade has to be between 0 to 4
   while (newGrade < 0 || newGrade > 4)
   {
     printf("Please enter a valid grade (on a scale of 0.0 to 4.0): ");
@@ -260,6 +262,7 @@ bool checkReadSem(char *name)
   return false;
 }
 
+// Function to get the current time for logging
 char *getTime()
 {
   // get current time in seconds since epoch
@@ -274,11 +277,13 @@ int main(int argc, char *argv[])
 {
   signal(SIGINT, cleanup_handler); // register the cleanup handler
 
+  // Declare variables for args (as specified by the assignment)
   char *filename;
   long recid = 0;
   int time_arg;
   char *shmid_input;
 
+  // Get the comamnd-line args
   int i = 0;
   for (i = 0; i < argc; i++)
   {
@@ -357,10 +362,10 @@ int main(int argc, char *argv[])
   fprintf(fptxt, "%s: writer %d enters the session.\n", timestamp, pid);
   fflush(fptxt);
 
-  bool firstPrint = true;
+  bool firstPrint = true; // Print to inform user that process is waiting
   while (1)
   {
-
+    // Create appropriate semaphore
     char *beginning = "/w_";
     char str_recid[20];
     sprintf(str_recid, "%ld", recid);
@@ -376,6 +381,7 @@ int main(int argc, char *argv[])
     strcpy(nameR, beginningR);
     strcat(nameR, str_recidR);
 
+    // Look for read semaphores and wait if they exist 
     if (checkReadSem(nameR))
     {
       if (firstPrint)
@@ -423,7 +429,7 @@ int main(int argc, char *argv[])
       }
     }
 
-    time_t startTimePostWait = time(NULL);
+    time_t startTimePostWait = time(NULL); // Time of starting process after waiting
 
     printf("%s status: ", name);
     sem_t *sem_writer = sem_open(name, O_CREAT | O_EXCL, 0666, MAX_WRITER);
@@ -442,7 +448,7 @@ int main(int argc, char *argv[])
           perror("sem_open");
           exit(EXIT_FAILURE);
         }
-        // start writing
+        // start logging and writing
         timestamp = getTime();
         fprintf(fptxt, "%s: writer %d is waiting on semaphore %s.\n", timestamp, pid, name);
         fflush(fptxt);
@@ -463,11 +469,12 @@ int main(int argc, char *argv[])
         bool found = false;
         for (i = 0; i < numOfrecords; i++)
         {
-
+          // Check if studentID exists in the shared array of studentIDs or not
           if (shared_array[i] == recid)
           {
             if (editRecord(recid, i, shared_array, startTimePostWait, time_arg) == 0)
             {
+              // Record found and updated
               found = true;
               printf("Record updated successfully\n");
               // update the records_modified semaphore by 1
@@ -486,6 +493,7 @@ int main(int argc, char *argv[])
             }
             else if (editRecord(recid, i, shared_array, startTimePostWait, time_arg) == -1)
             {
+              // Record not found
               printf("Record not found\n");
               found = false;
             }
@@ -497,7 +505,7 @@ int main(int argc, char *argv[])
             }
           }
         }
-        if (!found)
+        if (!found) // If record not found, let user know
         {
           printf("Record not found\n");
         }
@@ -555,6 +563,7 @@ int main(int argc, char *argv[])
         {
           if (editRecord(recid, i, shared_array, startTimePostWait, time_arg) == 0)
           {
+            // Record found and edited
             found = true;
             printf("Record edited successfully\n");
             // update the records_modified semaphore by 1
@@ -573,6 +582,7 @@ int main(int argc, char *argv[])
           }
           else if (editRecord(recid, i, shared_array, startTimePostWait, time_arg) == -1)
           {
+            // Record not found
             printf("Record not found\n");
             found = false;
           }
@@ -584,7 +594,7 @@ int main(int argc, char *argv[])
           }
         }
       }
-      if (!found)
+      if (!found) // Let user know that the record was not found
       {
         printf("Record not found\n");
       }
