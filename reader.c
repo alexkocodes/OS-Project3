@@ -167,6 +167,15 @@ int main(int argc, char *argv[])
         printf("Error opening file\n");
         exit(1);
     }
+    long lSize;
+    int numOfrecords;
+    studentRecord rec;
+    // check number of records stats in BIN file
+    fseek(fp, 0, SEEK_END);
+    lSize = ftell(fp);
+    rewind(fp);
+    // check abobe lib calls: fseek, ftell, rewind
+    numOfrecords = (int)lSize / sizeof(rec);
 
     // create a text file for logging
     FILE *fptxt;
@@ -221,15 +230,20 @@ int main(int argc, char *argv[])
         {
             perror("shmget failure");
             exit(1);
-        } else { // Attach shared memory segment
+        }
+        else
+        { // Attach shared memory segment
             double *max_waiting_time = (double *)shmat(shmid_max_waiting_time, NULL, 0);
             if (max_waiting_time == (void *)-1)
             {
                 perror("Failed to attach shared memory");
                 exit(EXIT_FAILURE);
-            } else {
+            }
+            else
+            {
                 // Update max_waiting_time if necessary
-                if (waiting_time > *max_waiting_time) {
+                if (waiting_time > *max_waiting_time)
+                {
                     *max_waiting_time = waiting_time;
                 }
             }
@@ -284,7 +298,8 @@ int main(int argc, char *argv[])
                 // loop througn the shared memory to find matching student id
                 int i = 0;
                 bool found = false;
-                for (i = 0; i < 500; i++)
+
+                for (i = 0; i < numOfrecords; i++)
                 {
 
                     if (shared_array[i] == recid)
@@ -378,7 +393,7 @@ int main(int argc, char *argv[])
             // loop througn the shared memory to find matching student id
             int i = 0;
             bool found = false;
-            for (i = 0; i < 500; i++)
+            for (i = 0; i < numOfrecords; i++)
             {
                 if (shared_array[i] == recid)
                 {
